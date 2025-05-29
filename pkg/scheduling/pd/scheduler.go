@@ -59,9 +59,8 @@ type Datastore interface {
 // provided configuration.
 func NewScheduler(ctx context.Context, schedCfg *config.Config, ds Datastore) (*Scheduler, error) {
 	prefixConfig := scorer.DefaultPrefixStoreConfig()
-	prefixConfig.BlockSize = schedCfg.PrefixBlockSize
-	prefixConfig.CacheSize = schedCfg.PrefixCacheSize
-	prefixConfig.BlockCacheSize = schedCfg.PrefixBlockCacheSize
+	prefixConfig.CacheBlockSize = schedCfg.PrefixCacheBlockSize
+	prefixConfig.CacheCapacity = schedCfg.PrefixCacheCapacity
 
 	scheduler := &Scheduler{
 		threshold:    schedCfg.PDThreshold,
