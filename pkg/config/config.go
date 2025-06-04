@@ -4,6 +4,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 
 	"github.com/go-logr/logr"
@@ -74,12 +75,14 @@ const (
 	// EXTERNAL_PREFILL_HTTP_POST_SCHEDULERS
 )
 
+// ExternalPluginInfo configuration of an external plugin
 type ExternalPluginInfo struct {
 	Name   string `json:"name"`
 	URL    string `json:"url"`
 	Weight int    `json:"weight"`
 }
 
+// ExternalPlugins contains all types of external plugins configuration
 type ExternalPlugins struct {
 	PreSchedulers  []ExternalPluginInfo
 	Filters        []ExternalPluginInfo
@@ -130,11 +133,11 @@ func (c *Config) LoadConfig() {
 
 	// load external plugins for decode and prefill schedulers
 	c.loadExternalPluginsInfo(httpPrefix, "", preSchedulers)
-	c.loadExternalPluginsInfo(httpPrefix, "", filter)
+	c.loadExternalPluginsInfo(httpPrefix, "", filters)
 	c.loadExternalPluginsInfo(httpPrefix, "", scorers)
 	c.loadExternalPluginsInfo(httpPrefix, "", postSchedulers)
 	c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, preSchedulers)
-	c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, filter)
+	c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, filters)
 	c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, scorers)
 	c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, postSchedulers)
 
@@ -167,17 +170,22 @@ func (c *Config) loadPluginInfo(plugins map[string]int, prefill bool, pluginName
 }
 
 // loadExternalPluginsInfo loads configuration of external plugins for the given scheduler type and the given plugins type
+//
+//nolint:unparam // future: protocol will support more values (grpc, wasm, etc.)
 func (c *Config) loadExternalPluginsInfo(protocol string, schedulerType string, pluginType string) {
 	envVarName := externalPrefix + protocol + schedulerType + pluginType
-	envVarRawValue := env.GetEnvString(enablementKey, "", c.logger)
+	envVarRawValue := env.GetEnvString(envVarName, "", c.logger)
 
 	if envVarRawValue == "" {
 		return
 	}
 
-	var plugins []ExternalPluginInfo{}
-	
-	json.Unmarshal([]byte(envVarRawValue), plugins)
+	var plugins []ExternalPluginInfo
+
+	if err := json.Unmarshal([]byte(envVarRawValue), &plugins); err != nil {
+		c.logger.Info("Error in environment variable unmarshaling", "error", err, "variable", envVarName)
+		return
+	}
 
 	fmt.Printf("Plugins: type=%s, info=%+v\n", pluginType, plugins)
 }
