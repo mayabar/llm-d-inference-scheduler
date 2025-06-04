@@ -3,6 +3,7 @@
 package config
 
 import (
+	"encoding/json"
 	"math"
 
 	"github.com/go-logr/logr"
@@ -54,13 +55,45 @@ const (
 
 	prefixScorerBlockSizeEnvKey  = "PREFIX_SCORER_BLOCK_SIZE"
 	prefixScorerBlockSizeDefault = 256
+
+	externalPrefix = "EXTERNAL_"
+	httpPrefix     = "HTTP_"
+
+	preSchedulers  = "PRE_SCHEDULERS"
+	filters        = "FILTERS"
+	scorers        = "SCORERS"
+	postSchedulers = "POST_SCHEDULERS"
+
+	// EXTERNAL_HTTP_PRE_SCHEDULERS
+	// EXTERNAL_PREFILL_HTTP_PRE_SCHEDULERS
+	// EXTERNAL_HTTP_FILTERS
+	// EXTERNAL_PREFILL_HTTP_FILTERS
+	// EXTERNAL_HTTP_SCORERS
+	// EXTERNAL_PREFILL_HTTP_SCORERS
+	// EXTERNAL_HTTP_POST_SCHEDULERS
+	// EXTERNAL_PREFILL_HTTP_POST_SCHEDULERS
 )
+
+type ExternalPluginInfo struct {
+	Name   string `json:"name"`
+	URL    string `json:"url"`
+	Weight int    `json:"weight"`
+}
+
+type ExternalPlugins struct {
+	PreSchedulers  []ExternalPluginInfo
+	Filters        []ExternalPluginInfo
+	Scorers        []ExternalPluginInfo
+	PostSchedulers []ExternalPluginInfo
+}
 
 // Config contains scheduler configuration, currently configuration is loaded from environment variables
 type Config struct {
-	logger                  logr.Logger
-	DecodeSchedulerPlugins  map[string]int
-	PrefillSchedulerPlugins map[string]int
+	logger                          logr.Logger
+	DecodeSchedulerPlugins          map[string]int
+	PrefillSchedulerPlugins         map[string]int
+	DecodeSchedulerExternalPlugins  ExternalPlugins
+	PrefillSchedulerExternalPlugins ExternalPlugins
 
 	PDEnabled       bool
 	PDThreshold     int
@@ -70,12 +103,14 @@ type Config struct {
 // NewConfig creates a new instance if Config
 func NewConfig(logger logr.Logger) *Config {
 	return &Config{
-		logger:                  logger,
-		DecodeSchedulerPlugins:  map[string]int{},
-		PrefillSchedulerPlugins: map[string]int{},
-		PDEnabled:               false,
-		PDThreshold:             math.MaxInt,
-		PrefixBlockSize:         prefixScorerBlockSizeDefault,
+		logger:                          logger,
+		DecodeSchedulerPlugins:          map[string]int{},
+		PrefillSchedulerPlugins:         map[string]int{},
+		DecodeSchedulerExternalPlugins:  ExternalPlugins{},
+		PrefillSchedulerExternalPlugins: ExternalPlugins{},
+		PDEnabled:                       false,
+		PDThreshold:                     math.MaxInt,
+		PrefixBlockSize:                 prefixScorerBlockSizeDefault,
 	}
 }
 
@@ -92,6 +127,16 @@ func (c *Config) LoadConfig() {
 		GIELeastKVCacheFilterName, GIELeastQueueFilterName, GIELoraAffinityFilterName,
 		GIELowQueueFilterName, GIESheddableCapacityFilterName,
 		GIEKVCacheUtilizationScorerName, GIEQueueScorerName, GIEPrefixScorerName)
+
+	// load external plugins for decode and prefill schedulers
+	c.loadExternalPluginsInfo(httpPrefix, "", preSchedulers)
+	c.loadExternalPluginsInfo(httpPrefix, "", filter)
+	c.loadExternalPluginsInfo(httpPrefix, "", scorers)
+	c.loadExternalPluginsInfo(httpPrefix, "", postSchedulers)
+	c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, preSchedulers)
+	c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, filter)
+	c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, scorers)
+	c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, postSchedulers)
 
 	c.PDEnabled = env.GetEnvString(pdEnabledEnvKey, "false", c.logger) == "true"
 	c.PDThreshold = env.GetEnvInt(pdPromptLenThresholdEnvKey, pdPromptLenThresholdDefault, c.logger)
@@ -119,4 +164,20 @@ func (c *Config) loadPluginInfo(plugins map[string]int, prefill bool, pluginName
 			c.logger.Info("Initialized plugin", "plugin", pluginName, "weight", weight)
 		}
 	}
+}
+
+// loadExternalPluginsInfo loads configuration of external plugins for the given scheduler type and the given plugins type
+func (c *Config) loadExternalPluginsInfo(protocol string, schedulerType string, pluginType string) {
+	envVarName := externalPrefix + protocol + schedulerType + pluginType
+	envVarRawValue := env.GetEnvString(enablementKey, "", c.logger)
+
+	if envVarRawValue == "" {
+		return
+	}
+
+	var plugins []ExternalPluginInfo{}
+	
+	json.Unmarshal([]byte(envVarRawValue), plugins)
+
+	fmt.Printf("Plugins: type=%s, info=%+v\n", pluginType, plugins)
 }
