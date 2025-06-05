@@ -4,7 +4,6 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
 
 	"github.com/go-logr/logr"
@@ -177,15 +176,16 @@ func (c *Config) loadExternalPluginsInfo(protocol string, schedulerType string, 
 	envVarRawValue := env.GetEnvString(envVarName, "", c.logger)
 
 	if envVarRawValue == "" {
+		c.logger.Info("Environment variable is not defined", "var", envVarName)
 		return
 	}
 
 	var plugins []ExternalPluginInfo
 
 	if err := json.Unmarshal([]byte(envVarRawValue), &plugins); err != nil {
-		c.logger.Info("Error in environment variable unmarshaling", "error", err, "variable", envVarName)
+		c.logger.Info("Error in environment variable unmarshaling", "error", err, "variable", envVarName, "value", envVarRawValue)
 		return
 	}
 
-	fmt.Printf("Plugins: type=%s, info=%+v\n", pluginType, plugins)
+	c.logger.Info("External plugin loaded", "type", pluginType, "plugins", plugins)
 }
