@@ -131,14 +131,15 @@ func (c *Config) LoadConfig() {
 		GIEKVCacheUtilizationScorerName, GIEQueueScorerName, GIEPrefixScorerName)
 
 	// load external plugins for decode and prefill schedulers
-	c.loadExternalPluginsInfo(httpPrefix, "", preSchedulers)
-	c.loadExternalPluginsInfo(httpPrefix, "", filters)
-	c.loadExternalPluginsInfo(httpPrefix, "", scorers)
-	c.loadExternalPluginsInfo(httpPrefix, "", postSchedulers)
-	c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, preSchedulers)
-	c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, filters)
-	c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, scorers)
-	c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, postSchedulers)
+	c.PrefillSchedulerExternalPlugins.PreSchedulers = c.loadExternalPluginsInfo(httpPrefix, "", preSchedulers)
+	c.PrefillSchedulerExternalPlugins.Filters = c.loadExternalPluginsInfo(httpPrefix, "", filters)
+	c.PrefillSchedulerExternalPlugins.Scorers = c.loadExternalPluginsInfo(httpPrefix, "", scorers)
+	c.PrefillSchedulerExternalPlugins.PostSchedulers = c.loadExternalPluginsInfo(httpPrefix, "", postSchedulers)
+
+	c.DecodeSchedulerExternalPlugins.PreSchedulers = c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, preSchedulers)
+	c.DecodeSchedulerExternalPlugins.Filters = c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, filters)
+	c.DecodeSchedulerExternalPlugins.Scorers = c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, scorers)
+	c.DecodeSchedulerExternalPlugins.PostSchedulers = c.loadExternalPluginsInfo(httpPrefix, prefillPrefix, postSchedulers)
 
 	c.PDEnabled = env.GetEnvString(pdEnabledEnvKey, "false", c.logger) == "true"
 	c.PDThreshold = env.GetEnvInt(pdPromptLenThresholdEnvKey, pdPromptLenThresholdDefault, c.logger)
@@ -171,21 +172,22 @@ func (c *Config) loadPluginInfo(plugins map[string]int, prefill bool, pluginName
 // loadExternalPluginsInfo loads configuration of external plugins for the given scheduler type and the given plugins type
 //
 //nolint:unparam // future: protocol will support more values (grpc, wasm, etc.)
-func (c *Config) loadExternalPluginsInfo(protocol string, schedulerType string, pluginType string) {
+func (c *Config) loadExternalPluginsInfo(protocol string, schedulerType string, pluginType string) []ExternalPluginInfo {
+	var plugins []ExternalPluginInfo
+
 	envVarName := externalPrefix + protocol + schedulerType + pluginType
 	envVarRawValue := env.GetEnvString(envVarName, "", c.logger)
 
 	if envVarRawValue == "" {
 		c.logger.Info("Environment variable is not defined", "var", envVarName)
-		return
+		return plugins
 	}
-
-	var plugins []ExternalPluginInfo
 
 	if err := json.Unmarshal([]byte(envVarRawValue), &plugins); err != nil {
 		c.logger.Info("Error in environment variable unmarshaling", "error", err, "variable", envVarName, "value", envVarRawValue)
-		return
+		return plugins
 	}
 
 	c.logger.Info("External plugin loaded", "type", pluginType, "plugins", plugins)
+	return plugins
 }
