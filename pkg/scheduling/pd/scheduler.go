@@ -31,13 +31,21 @@ func CreatePDSchedulerConfig(ctx context.Context, pdConfig *config.Config, prefi
 	// otherwise, PD is enabled.
 
 	// create decode scheduling profile.
-	decodeProfile, err := createSchedulerProfile(ctx, filter.NewDecodeFilter(), picker.NewMaxScorePicker(), pdConfig.DecodeSchedulerPlugins, prefixScorer, true)
+	decodeFilter, err := filter.NewDecodeFilter()
+	if err != nil {
+		return nil, err
+	}
+	decodeProfile, err := createSchedulerProfile(ctx, decodeFilter, picker.NewMaxScorePicker(), pdConfig.DecodeSchedulerPlugins, prefixScorer, true)
 	if err != nil {
 		return nil, fmt.Errorf("falied to create decode scheduling profile - %w", err)
 	}
 
 	// create prefil scheduling profile.
-	prefilProfile, err := createSchedulerProfile(ctx, filter.NewPrefillFilter(), picker.NewMaxScorePicker(), pdConfig.PrefillSchedulerPlugins, prefixScorer, true)
+	prefillFilter, err := filter.NewPrefillFilter()
+	if err != nil {
+		return nil, err
+	}
+	prefilProfile, err := createSchedulerProfile(ctx, prefillFilter, picker.NewMaxScorePicker(), pdConfig.PrefillSchedulerPlugins, prefixScorer, true)
 	if err != nil {
 		return nil, fmt.Errorf("falied to create prefill scheduling profile - %w", err)
 	}
