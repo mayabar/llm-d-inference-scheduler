@@ -8,11 +8,8 @@ import (
 )
 
 const (
-	// DecodeFilterType is the type of the DecodeFilter
-	DecodeFilterType = "decode-filter"
-
-	// PrefillFilterType is the type of the PrefillFilter
-	PrefillFilterType = "prefill-filter"
+	// ByRoleLabelFilterType is the type of the ByLabelsFilter
+	ByRoleLabelFilterType = "role-label"
 
 	// RoleLabel name
 	RoleLabel = "llm-d.ai/role"
@@ -24,90 +21,64 @@ const (
 	RoleBoth = "both"
 )
 
-// compile-time type assertion
-var _ framework.Filter = &PrefillFilter{}
-
-// NewPrefillFilter creates a new instance of the DecodeFilter
-func NewPrefillFilter() *PrefillFilter {
-	return &PrefillFilter{
-		name: PrefillFilterType,
-	}
+// ByRoleLabel - filters out pods based on the role defined by RoleLabel label
+type ByRoleLabel struct {
+	// name defines the filter name
+	name string
+	// validRoles defines list of valid role header values
+	validRoles map[string]bool
+	// allowsNoRolesLabel - if true pods without role label will be considered as valid (not filtered out)
+	allowsNoRolesLabel bool
 }
 
-// PrefillFilter - filters out pods that are not marked with role Prefill
-type PrefillFilter struct {
-	name string
+var _ framework.Filter = &ByRoleLabel{} // validate interface conformance
+
+// NewByRoleLabel creates and returns an instance of the RoleBasedFilter based on the input parameters
+// name - the filter name
+// rolesArr - list of valid roles
+func NewByRoleLabel(name string, allowsNoRolesLabel bool, rolesArr ...string) *ByRoleLabel {
+	roles := map[string]bool{}
+
+	for _, role := range rolesArr {
+		roles[role] = true
+	}
+
+	return &ByRoleLabel{name: name, allowsNoRolesLabel: allowsNoRolesLabel, validRoles: roles}
+}
+
+// NewPrefillFilter creates and returns an instance of the Filter configured for prefill role
+func NewPrefillFilter() framework.Filter {
+	return NewByRoleLabel("prefill-filter", false, RolePrefill)
+}
+
+// NewDecodeFilter creates and returns an instance of the Filter configured for decode role
+func NewDecodeFilter() framework.Filter {
+	return NewByRoleLabel("decode-filter", true, RoleDecode, RoleBoth)
 }
 
 // Type returns the type of the filter
-func (pf *PrefillFilter) Type() string {
-	return PrefillFilterType
+func (f *ByRoleLabel) Type() string {
+	return ByRoleLabelFilterType
 }
 
-// Name returns the name of the instance of the filter.
-func (pf *PrefillFilter) Name() string {
-	return pf.name
+// Name returns the name of the filter
+func (f *ByRoleLabel) Name() string {
+	return f.name
 }
 
-// WithName sets the name of the filter.
-func (pf *PrefillFilter) WithName(name string) *PrefillFilter {
-	pf.name = name
-	return pf
-}
-
-// Filter filters out all pods that are not marked as "prefill"
-func (pf *PrefillFilter) Filter(_ context.Context, _ *types.CycleState, _ *types.LLMRequest, pods []types.Pod) []types.Pod {
+// Filter filters out all pods that are not marked with one of roles from the validRoles collection
+// or has no role label in case allowsNoRolesLabel is true
+func (f *ByRoleLabel) Filter(_ context.Context, _ *types.CycleState, _ *types.LLMRequest, pods []types.Pod) []types.Pod {
 	filteredPods := []types.Pod{}
 
 	for _, pod := range pods {
-		role := pod.GetPod().Labels[RoleLabel]
-		if role == RolePrefill { // TODO: doesn't RoleBoth also imply Prefill?
+		role, labelDefined := pod.GetPod().Labels[RoleLabel]
+		_, roleExists := f.validRoles[role]
+
+		if (!labelDefined && f.allowsNoRolesLabel) || roleExists {
 			filteredPods = append(filteredPods, pod)
 		}
 	}
-	return filteredPods
-}
 
-// compile-time type assertion
-var _ framework.Filter = &DecodeFilter{}
-
-// NewDecodeFilter creates a new instance of the DecodeFilter
-func NewDecodeFilter() *DecodeFilter {
-	return &DecodeFilter{
-		name: DecodeFilterType,
-	}
-}
-
-// DecodeFilter - filters out pods that are not marked with role Decode or Both
-type DecodeFilter struct {
-	name string
-}
-
-// Type returns the type of the filter
-func (df *DecodeFilter) Type() string {
-	return DecodeFilterType
-}
-
-// Name returns the name of the instance of the filter.
-func (df *DecodeFilter) Name() string {
-	return df.name
-}
-
-// WithName sets the name of the filter.
-func (df *DecodeFilter) WithName(name string) *DecodeFilter {
-	df.name = name
-	return df
-}
-
-// Filter removes all pods that are not marked as "decode" or "both"
-func (df *DecodeFilter) Filter(_ context.Context, _ *types.CycleState, _ *types.LLMRequest, pods []types.Pod) []types.Pod {
-	filteredPods := []types.Pod{}
-
-	for _, pod := range pods {
-		role, defined := pod.GetPod().Labels[RoleLabel]
-		if !defined || role == RoleDecode || role == RoleBoth {
-			filteredPods = append(filteredPods, pod)
-		}
-	}
 	return filteredPods
 }
