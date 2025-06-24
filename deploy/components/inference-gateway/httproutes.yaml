@@ -7,6 +7,10 @@ spec:
   - name: inference-gateway
   rules:
   - matches:
+    - headers:
+      - type: Exact
+        name: X-Gateway-Model-Name
+        value: ${MODEL_NAME}
     - path:
         type: PathPrefix
         value: /
@@ -17,3 +21,4 @@ spec:
       port: 8000
     timeouts:
       request: 30s
+
