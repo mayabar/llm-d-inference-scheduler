@@ -19,7 +19,7 @@ type ByLabel struct {
 	// labelName defines the name of the label to be checked
 	labelName string
 	// validValues defines list of valid label values
-	validValues map[string]bool
+	validValues map[string]struct{}
 	// allowsNoLabel - if true pods without given label will be considered as valid (not filtered out)
 	allowsNoLabel bool
 }
@@ -32,10 +32,10 @@ var _ framework.Filter = &ByLabel{} // validate interface conformance
 // allowsNoLabel - if true pods without given label will be considered as valid (not filtered out)
 // validValuesApp - list of valid values
 func NewByLabel(name string, labelName string, allowsNoLabel bool, validValuesApp ...string) *ByLabel {
-	validValues := map[string]bool{}
+	validValues := map[string]struct{}{}
 
 	for _, v := range validValuesApp {
-		validValues[v] = true
+		validValues[v] = struct{}{}
 	}
 
 	return &ByLabel{name: name, labelName: labelName, allowsNoLabel: allowsNoLabel, validValues: validValues}
