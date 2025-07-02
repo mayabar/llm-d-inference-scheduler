@@ -54,7 +54,8 @@ spec:
         args:
         - "--port=8000"
         - "--vllm-port=8200"
-        - "--connector=lmcache"
+        # - "--connector=lmcache"
+        - "--connector=nixl"
         ports:
         - containerPort: 8000
           protocol: TCP

@@ -54,11 +54,11 @@ export VLLM_REPLICA_COUNT="${VLLM_REPLICA_COUNT:-1}"
 export PD_ENABLED="\"${PD_ENABLED:-false}\""
 
 # By default the PD threshhold is ten tokens
-export PD_PROMPT_LEN_THRESHOLD="\"${PD_PROMPT_LEN_THRESHOLD:-10}\""
+export PD_PROMPT_LEN_THRESHOLD="\"${PD_PROMPT_LEN_THRESHOLD:-5}\""
 
 # Replica counts for P and D
 export VLLM_REPLICA_COUNT_P="${VLLM_REPLICA_COUNT_P:-1}"
-export VLLM_REPLICA_COUNT_D="${VLLM_REPLICA_COUNT_D:-2}"
+export VLLM_REPLICA_COUNT_D="${VLLM_REPLICA_COUNT_D:-1}"
 
 # ------------------------------------------------------------------------------
 # Setup & Requirement Checks
