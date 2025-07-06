@@ -22,6 +22,7 @@ spec:
         args:
         - "--port=8000"
         - "--model=${MODEL_NAME}"
+        - "--lora=\"l1,l2,l3\""
         ports:
         - name: http
           containerPort: 8000
