@@ -2,8 +2,10 @@ package scorer
 
 import (
 	"context"
+	"encoding/json"
 
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/plugins"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/framework"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/types"
 )
@@ -16,8 +18,13 @@ const (
 // compile-time type assertion
 var _ framework.Scorer = &LoraAwareScorer{}
 
+// LoraAwareScorerFactory defines the factory function for the LoraAwareScorer
+func LoraAwareScorerFactory(name string, _ json.RawMessage, handle plugins.Handle) (plugins.Plugin, error) {
+	return NewLoraAwareScorer(handle.Context()).WithName(name), nil
+}
+
 // NewLoraAwareScorer creates a new LoRA adapters based scorer
-func NewLoraAwareScorer(_ context.Context) framework.Scorer {
+func NewLoraAwareScorer(_ context.Context) *LoraAwareScorer {
 	return &LoraAwareScorer{
 		name: LoraAwareScorerType,
 	}
@@ -48,6 +55,8 @@ func (s *LoraAwareScorer) WithName(name string) *LoraAwareScorer {
 func (s *LoraAwareScorer) Score(ctx context.Context, _ *types.CycleState, request *types.LLMRequest, pods []types.Pod) map[types.Pod]float64 {
 	scoredPods := make(map[types.Pod]float64)
 	logger := log.FromContext(ctx).WithName(s.name)
+
+	logger.Info(">>> LORA AWARE SCORER - start <<<")
 
 	for _, pod := range pods {
 		logger.Info(">>> Check lora on pod", "lora", request.TargetModel, "pod", pod.GetPod().NamespacedName.String())

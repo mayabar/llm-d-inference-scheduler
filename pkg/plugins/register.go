@@ -20,4 +20,5 @@ func RegisterAllPlugins() {
 	plugins.Register(scorer.KvCacheAwareScorerType, scorer.KvCacheAwareScorerFactory)
 	plugins.Register(scorer.LoadAwareScorerType, scorer.LoadAwareScorerFactory)
 	plugins.Register(scorer.SessionAffinityScorerType, scorer.SessionAffinityScorerFactory)
+	plugins.Register(scorer.LoraAwareScorerType, scorer.LoraAwareScorerFactory)
 }

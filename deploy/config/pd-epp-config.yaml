@@ -15,16 +15,20 @@ plugins:
   parameters:
     threshold: 10
     hashBlockSize: 5
+- type: lora-aware-scorer
+- type: load-aware-scorer
+  parameters:
+    threshold: 4
 schedulingProfiles:
 - name: prefill
   plugins:
   - pluginRef: prefill-filter
   - pluginRef: max-score
   - pluginRef: prefix-cache
-    weight: 50
+    weight: 1
 - name: decode
   plugins:
   - pluginRef: decode-filter
   - pluginRef: max-score
   - pluginRef: prefix-cache
-    weight: 50
+    weight: 12

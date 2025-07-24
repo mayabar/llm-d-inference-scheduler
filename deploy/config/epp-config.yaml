@@ -11,10 +11,11 @@ plugins:
 - type: decode-filter
 - type: max-score
 - type: single-profile
+- type: lora-aware-scorer
 schedulingProfiles:
 - name: default
   plugins:
   - pluginRef: decode-filter
   - pluginRef: max-score
   - pluginRef: prefix-cache
-    weight: 50
+    weight: 5

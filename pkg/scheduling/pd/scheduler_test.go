@@ -107,15 +107,15 @@ func TestPDSchedule(t *testing.T) {
 	}
 
 	tests := []struct {
-		name            string
-		req             *types.LLMRequest
-		input           []backendmetrics.PodMetrics
-		wantRes         *types.SchedulingResult
-		wantRes2        *types.SchedulingResult
-		wantHeaders     map[string]string
-		unwantedHeaders []string
-		unwantedPodIDs  []string
-		err             bool
+		name           string
+		req            *types.LLMRequest
+		input          []backendmetrics.PodMetrics
+		wantRes        *types.SchedulingResult
+		wantRes2       *types.SchedulingResult
+		wantHeaders    map[string]string
+		unwantedHeader []string
+		unwantedPodIDs []string
+		err            bool
 	}{
 		{
 			name: "no pods in datastore",

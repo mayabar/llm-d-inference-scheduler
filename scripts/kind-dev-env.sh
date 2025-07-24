@@ -172,6 +172,7 @@ else
   KUSTOMIZE_DIR="deploy/environments/dev/kind-istio-pd"
 fi 
 
+kubectl --context ${KUBE_CONTEXT}  delete --ignore-not-found=true ConfigMap epp-config
 kubectl --context ${KUBE_CONTEXT} create configmap epp-config --from-file=epp-config.yaml=${EPP_CONFIG}
 
 kustomize build --enable-helm  ${KUSTOMIZE_DIR} \

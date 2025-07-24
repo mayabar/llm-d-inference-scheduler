@@ -299,6 +299,13 @@ clean-env-dev-kind:      ## Cleanup kind setup (delete cluster $(KIND_CLUSTER_NA
 	@echo "INFO: cleaning up kind cluster $(KIND_CLUSTER_NAME)"
 	kind delete cluster --name $(KIND_CLUSTER_NAME)
 
+.PHONY: update-sim-kind
+update-sim-kind: 
+	CLUSTER_NAME=$(KIND_CLUSTER_NAME) \
+	GATEWAY_HOST_PORT=$(KIND_GATEWAY_HOST_PORT) \
+	IMAGE_REGISTRY=$(IMAGE_REGISTRY) \
+	EPP_TAG=$(EPP_TAG) \
+		./scripts/kind-dev-env.sh
 
 # Kubernetes Development Environment - Deploy
 # This target deploys the inference scheduler stack in a specific namespace for development and testing.

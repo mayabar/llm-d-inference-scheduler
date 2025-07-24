@@ -10,3 +10,42 @@ spec:
   targetModels:
   - name: ${MODEL_NAME}
     weight: 100
+---
+apiVersion: inference.networking.x-k8s.io/v1alpha2
+kind: InferenceModel
+metadata:
+  name: l1
+spec:
+  modelName: l1
+  criticality: Critical
+  poolRef:
+    name: ${POOL_NAME}
+  targetModels:
+  - name: l1
+    weight: 100
+---
+apiVersion: inference.networking.x-k8s.io/v1alpha2
+kind: InferenceModel
+metadata:
+  name: l2
+spec:
+  modelName: l2
+  criticality: Critical
+  poolRef:
+    name: ${POOL_NAME}
+  targetModels:
+  - name: l2
+    weight: 100
+---
+apiVersion: inference.networking.x-k8s.io/v1alpha2
+kind: InferenceModel
+metadata:
+  name: l3
+spec:
+  modelName: l3
+  criticality: Critical
+  poolRef:
+    name: ${POOL_NAME}
+  targetModels:
+  - name: l3
+    weight: 100
