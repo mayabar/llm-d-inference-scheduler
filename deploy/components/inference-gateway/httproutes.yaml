@@ -7,6 +7,10 @@ spec:
   - name: inference-gateway
   rules:
   - matches:
+    - headers:
+      - type: Exact
+        name: X-Gateway-Model-Name
+        value: ${MODEL_NAME_SAFE}
     - path:
         type: PathPrefix
         value: /
