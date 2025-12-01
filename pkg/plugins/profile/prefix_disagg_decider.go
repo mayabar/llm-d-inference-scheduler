@@ -19,7 +19,8 @@ import (
 // compile-time type assertion
 var _ pdDecider = &PrefixDisaggregationDecider{}
 
-const prefixDeciderName = "prefix-disaggregation-decider"
+// PrefixDeciderName name of the prefix decider
+const PrefixDeciderName = "prefix-disaggregation-decider"
 
 type prefixDisaggregationDeciderParameters struct {
 	NonCachedTokens  int    `json:"non-cached-tokens"`
