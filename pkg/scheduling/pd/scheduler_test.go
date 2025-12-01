@@ -2,6 +2,7 @@ package pd_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -247,7 +248,10 @@ func TestPDSchedule(t *testing.T) {
 			err = decodeSchedulerProfile.AddPlugins(framework.NewWeightedScorer(prefixScorer, 0))
 			assert.NoError(t, err, "SchedulerProfile AddPlugins returned unexpected error")
 
-			profileHandle := profile.NewPdProfileHandler(prefill, decode, prefixScorer.TypedName().Name, 10, 5, 0)
+			profileHandle, err := profile.NewPdProfileHandler(prefill, decode, prefixScorer.TypedName().Name, 0,
+				"prefix-disaggregation-decider", json.RawMessage("{\"non-cached-tokens\": 10, \"block-size\": 5}"),
+			)
+			assert.NoError(t, err)
 
 			schedulerConfig := scheduling.NewSchedulerConfig(profileHandle, map[string]*framework.SchedulerProfile{
 				prefill: prefillSchedulerProfile,
