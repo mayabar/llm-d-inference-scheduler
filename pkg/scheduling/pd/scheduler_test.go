@@ -214,7 +214,7 @@ func TestPDSchedule(t *testing.T) {
 				TargetModel: "critical",
 				Body: &types.LLMRequestBody{
 					Completions: &types.CompletionsRequest{
-						Prompt: "12345678906",
+						Prompt: "1234567890123456789012345678901234567890",
 					},
 				},
 			},
@@ -233,7 +233,7 @@ func TestPDSchedule(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			//  initialize scheduler with config
-			prefixScorer := prefix.New(ctx, prefix.Config{BlockSize: 5, MaxPrefixBlocksToMatch: 256, LRUCapacityPerServer: 31250})
+			prefixScorer := prefix.New(ctx, prefix.Config{AutoTune: false, BlockSize: 2, MaxPrefixBlocksToMatch: 256, LRUCapacityPerServer: 31250})
 
 			prefillSchedulerProfile := framework.NewSchedulerProfile().
 				WithFilters(filter.NewPrefillRole()).
@@ -249,7 +249,7 @@ func TestPDSchedule(t *testing.T) {
 			assert.NoError(t, err, "SchedulerProfile AddPlugins returned unexpected error")
 
 			profileHandle, err := profile.NewPdProfileHandler(prefill, decode, prefixScorer.TypedName().Name, 0,
-				profile.PrefixDeciderName, json.RawMessage("{\"non-cached-tokens\": 10, \"block-size\": 5}"),
+				profile.PrefixDeciderName, json.RawMessage("{\"nonCachedTokens\": 2}"),
 			)
 			assert.NoError(t, err)
 
