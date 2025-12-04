@@ -16,6 +16,11 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
+const (
+	// An estimated average characters per token, used since the request we cached is not tokenized.
+	averageCharactersPerToken = 4
+)
+
 // compile-time type assertion
 var _ pdDecider = &PrefixDisaggregationDecider{}
 
@@ -23,15 +28,15 @@ var _ pdDecider = &PrefixDisaggregationDecider{}
 const PrefixDeciderName = "prefix-disaggregation-decider"
 
 type prefixDisaggregationDeciderParameters struct {
-	NonCachedTokens  int    `json:"non-cached-tokens"`
-	PrefixPluginName string `json:"prefix-plugin-name"`
-	BlockSize        int    `json:"block-size"`
+	// NonCachedTokens non cached tokens limit that triggers disaggregated PD
+	NonCachedTokens int `json:"nonCachedTokens"`
+	// PrefixPluginName prefix plugin name, optional, should be defined if prefix plugin name is not a default
+	PrefixPluginName string `json:"prefixPluginName"`
 }
 
 var defaultParams = prefixDisaggregationDeciderParameters{
 	NonCachedTokens:  0,
 	PrefixPluginName: prefix.PrefixCachePluginType,
-	BlockSize:        64,
 }
 
 func (p prefixDisaggregationDeciderParameters) validate() error {
@@ -41,10 +46,6 @@ func (p prefixDisaggregationDeciderParameters) validate() error {
 
 	if p.NonCachedTokens < 0 {
 		return errors.New("nonCachedTokens parameter of prefix disaggregation decider cannot be negative")
-	}
-
-	if p.BlockSize <= 0 {
-		return errors.New("blockSize parameter of prefix disaggregation decider should be positive")
 	}
 
 	return nil
@@ -67,7 +68,6 @@ func newPrefixDisaggregationDecider(rawParameters json.RawMessage) (*PrefixDisag
 	return &PrefixDisaggregationDecider{
 		prefixPluginTypedName: plugins.TypedName{Type: prefix.PrefixCachePluginType, Name: parameters.PrefixPluginName},
 		nonCachedTokens:       parameters.NonCachedTokens,
-		blockSize:             parameters.BlockSize,
 	}, nil
 }
 
@@ -75,7 +75,6 @@ func newPrefixDisaggregationDecider(rawParameters json.RawMessage) (*PrefixDisag
 type PrefixDisaggregationDecider struct {
 	prefixPluginTypedName plugins.TypedName
 	nonCachedTokens       int
-	blockSize             int
 }
 
 // isDisaggregationRequired checks if disaggregated PD is required for the given request and pod.
@@ -95,12 +94,12 @@ func (d *PrefixDisaggregationDecider) isDisaggregationRequired(ctx context.Conte
 		return false
 	}
 
-	hitPrefix := max(prefixState.PrefixCacheServers[prefix.ServerID(pod)], 0)
-	hitPercentagePrefix = float64(hitPrefix*d.blockSize) / float64(inputBytesLen)
+	hitPrefix := prefixState.PrefixCacheServers[prefix.ServerID(pod)] // number of cached chars
+	hitPercentagePrefix = float64(hitPrefix) / float64(inputBytesLen) // length of the cached part in percentages
 	log.FromContext(ctx).V(logutil.DEBUG).Info("Computed hit percentage for prefix cache",
 		"hitPercentage", hitPercentagePrefix, "absolute hit prefix len", hitPrefix, "promptLength", inputBytesLen)
 
-	if (1.0-hitPercentagePrefix)*float64(inputBytesLen) < float64(d.nonCachedTokens) {
+	if (1.0-hitPercentagePrefix)*float64(inputBytesLen) < float64(d.nonCachedTokens)*averageCharactersPerToken {
 		log.FromContext(ctx).Info("Non-cached suffix is smaller than threshold, using decode profile only", "hitPercentage", hitPercentagePrefix)
 		return false // do not run prefill
 	}
