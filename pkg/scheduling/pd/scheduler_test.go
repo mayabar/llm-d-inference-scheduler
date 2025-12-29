@@ -3,6 +3,7 @@ package pd_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/backend"
 	backendmetrics "sigs.k8s.io/gateway-api-inference-extension/pkg/epp/backend/metrics" // Import config for thresholds
+	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/datalayer"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/framework"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/framework/plugins/multi/prefix"
@@ -34,6 +36,7 @@ const (
 // Tests the scheduler expected behavior.
 func TestPDSchedule(t *testing.T) {
 	pod1 := &types.PodMetrics{
+		AttributeMap: datalayer.NewAttributes(),
 		Pod: &backend.Pod{
 			NamespacedName: k8stypes.NamespacedName{Name: "pod1"},
 			Address:        "1.2.3.4",
@@ -42,6 +45,7 @@ func TestPDSchedule(t *testing.T) {
 		MetricsState: &backendmetrics.MetricsState{WaitingQueueSize: 0},
 	}
 	pod2 := &types.PodMetrics{
+		AttributeMap: datalayer.NewAttributes(),
 		Pod: &backend.Pod{
 			NamespacedName: k8stypes.NamespacedName{Name: "pod2"},
 			Address:        "5.6.7.8",
@@ -50,6 +54,7 @@ func TestPDSchedule(t *testing.T) {
 		MetricsState: &backendmetrics.MetricsState{WaitingQueueSize: 0},
 	}
 	noRolePod1 := &types.PodMetrics{
+		AttributeMap: datalayer.NewAttributes(),
 		Pod: &backend.Pod{
 			NamespacedName: k8stypes.NamespacedName{Name: "noRolePod1"},
 			Address:        "1.1.1.1",
@@ -249,7 +254,7 @@ func TestPDSchedule(t *testing.T) {
 			assert.NoError(t, err, "SchedulerProfile AddPlugins returned unexpected error")
 
 			profileHandle, err := profile.NewPdProfileHandler(prefill, decode, prefixScorer.TypedName().Name, 0,
-				profile.PrefixDeciderName, json.RawMessage("{\"nonCachedTokens\": 2}"),
+				profile.PrefixDeciderType, json.RawMessage("{\"nonCachedTokens\": 2}"),
 			)
 			assert.NoError(t, err)
 
@@ -264,7 +269,14 @@ func TestPDSchedule(t *testing.T) {
 				t.Errorf("Unexpected error, got %v, want %v", err, test.err)
 			}
 
-			if diff := cmp.Diff(test.wantRes, got, cmpopts.IgnoreFields(types.ScoredPod{}, "Score")); diff != "" {
+			if diff := cmp.Diff(test.wantRes, got,
+				cmpopts.IgnoreFields(types.ScoredPod{}, "Score"),
+				cmpopts.IgnoreUnexported(
+					// types.SchedulingResult{}, // Top-level
+					// types.ScoredPod{},        // Nested in TargetPods
+					// types.PodMetrics{},       // Nested in ScoredPod.Pod
+					datalayer.Attributes{}, // Deepest with .data unexported
+				)); diff != "" {
 				t.Errorf("Unexpected output (-want +got): %v", diff)
 			}
 

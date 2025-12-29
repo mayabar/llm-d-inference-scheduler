@@ -83,7 +83,9 @@ func NewPdProfileHandler(prefillProfile string, decodeProfile string, prefixPlug
 	switch deciderName {
 	case alwaysDeciderName:
 		decider, err = NewAlwaysDisaggregationDecider(deciderParams)
-	case PrefixDeciderName:
+	case neverDeciderName:
+		decider, err = NewNeverDisaggregationDecider(deciderParams)
+	case PrefixDeciderType:
 		decider, err = newPrefixDisaggregationDecider(deciderParams)
 	default:
 		return nil, fmt.Errorf("invalid decider type '%s'", deciderName)

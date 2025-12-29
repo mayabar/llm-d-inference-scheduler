@@ -8,24 +8,18 @@ import (
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/datalayer/plugins/approximateprefix"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/plugins"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/framework/plugins/multi/prefix"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/types"
-	logutil "sigs.k8s.io/gateway-api-inference-extension/pkg/epp/util/logging"
-
-	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
-const (
-	// An estimated average characters per token, used since the request we cached is not tokenized.
-	averageCharactersPerToken = 4
-)
+// PrefixDeciderType name of the prefix decider
+const PrefixDeciderType = "prefix-disaggregation-decider"
 
 // compile-time type assertion
 var _ pdDecider = &PrefixDisaggregationDecider{}
-
-// PrefixDeciderName name of the prefix decider
-const PrefixDeciderName = "prefix-disaggregation-decider"
+var _ plugins.ConsumerPlugin = &PrefixDisaggregationDecider{}
 
 type prefixDisaggregationDeciderParameters struct {
 	// NonCachedTokens non cached tokens limit that triggers disaggregated PD
@@ -78,31 +72,51 @@ type PrefixDisaggregationDecider struct {
 }
 
 // isDisaggregationRequired checks if disaggregated PD is required for the given request and pod.
-func (d *PrefixDisaggregationDecider) isDisaggregationRequired(ctx context.Context, cycleState *types.CycleState,
-	inputBytesLen int, pod k8stypes.NamespacedName) bool {
+func (d *PrefixDisaggregationDecider) isDisaggregationRequired(ctx context.Context, _ *types.CycleState,
+	inputBytesLen int, pod types.Pod) bool {
 	if d.nonCachedTokens <= 0 {
 		// no disaggregation in case of non cached tokens number is 0
 		return false
 	}
-
+	if pod == nil {
+		log.FromContext(ctx).Info(">> Prefix decider: pod is nil")
+		return false
+	}
 	// inspect the decode pod to decide if prefill should run or not.
-	// if the request is short enough - no disaggregation
-	hitPercentagePrefix := 0.0 // default to 0, meaning no prefix cache hit
-	prefixState, err := types.ReadCycleStateKey[*prefix.SchedulingContextState](cycleState, plugins.StateKey(d.prefixPluginTypedName.String()))
-	if err != nil {
-		log.FromContext(ctx).Error(err, "unable to read prefix state")
+	// if the non-cached part is short enough - no disaggregation.
+	inputTokensCnt := float64(inputBytesLen) / float64(prefix.AverageCharactersPerToken)
+	prefixInfoRaw, ok := pod.Get(approximateprefix.PrefixCacheMatchInfoKey)
+	if !ok || prefixInfoRaw == nil {
+		log.FromContext(ctx).Info("Unable to read prefix cache state")
+		return false
+	}
+	prefixCacheMatchInfo, ok := prefixInfoRaw.(*approximateprefix.PrefixCacheMatchInfo)
+	if !ok {
+		log.FromContext(ctx).Info("Wrong type of prefix cache match info")
 		return false
 	}
 
-	hitPrefix := prefixState.PrefixCacheServers[prefix.ServerID(pod)] // number of cached chars
-	hitPercentagePrefix = float64(hitPrefix) / float64(inputBytesLen) // length of the cached part in percentages
-	log.FromContext(ctx).V(logutil.DEBUG).Info("Computed hit percentage for prefix cache",
-		"hitPercentage", hitPercentagePrefix, "absolute hit prefix len", hitPrefix, "promptLength", inputBytesLen)
+	// number of cached tokens
+	hitPrefix := float64(prefixCacheMatchInfo.MatchLength())
+	// length of the cached part in percentages
+	hitPercentagePrefix := hitPrefix / inputTokensCnt
+	log.FromContext(ctx).Info("Computed hit percentage for prefix cache",
+		"hitPercentage", hitPercentagePrefix, "absolute hit prefix len (tokens)", hitPrefix,
+		"prompt length (token)", inputTokensCnt)
 
-	if (1.0-hitPercentagePrefix)*float64(inputBytesLen) < float64(d.nonCachedTokens)*averageCharactersPerToken {
-		log.FromContext(ctx).Info("Non-cached suffix is smaller than threshold, using decode profile only", "hitPercentage", hitPercentagePrefix)
+	if (1.0-hitPercentagePrefix)*inputTokensCnt < float64(d.nonCachedTokens) {
+		log.FromContext(ctx).Info("Non-cached suffix is smaller than threshold, using decode profile only",
+			"hitPercentage", hitPercentagePrefix)
 		return false // do not run prefill
 	}
 
 	return true
+}
+
+func (d *PrefixDisaggregationDecider) Consumes() map[string]any {
+	return map[string]any{approximateprefix.PrefixCacheMatchInfoKey: approximateprefix.PrefixCacheMatchInfo{}}
+}
+
+func (d *PrefixDisaggregationDecider) TypedName() plugins.TypedName {
+	return plugins.TypedName{Type: PrefixDeciderType}
 }

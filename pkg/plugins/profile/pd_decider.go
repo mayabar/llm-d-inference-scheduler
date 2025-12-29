@@ -6,14 +6,12 @@ import (
 	"encoding/json"
 
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/types"
-
-	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
 // pdDecider interface for pd profile handler diceder
 type pdDecider interface {
 	// isDisaggregationRequired checks if disaggregated PD is required for the given request and pod.
-	isDisaggregationRequired(ctx context.Context, cycleState *types.CycleState, inputBytesLen int, pod k8stypes.NamespacedName) bool
+	isDisaggregationRequired(ctx context.Context, cycleState *types.CycleState, inputBytesLen int, pod types.Pod) bool
 }
 
 // pdDeciderParams parameters for pdDecider creation

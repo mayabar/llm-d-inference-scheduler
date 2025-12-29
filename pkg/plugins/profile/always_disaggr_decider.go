@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/types"
-
-	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
 // compile-time type assertion
@@ -26,6 +24,6 @@ type AlwaysDisaggregationDecider struct {
 
 // isDisaggregationRequired checks if disaggregated PD is required for the given request and pod.
 func (d *AlwaysDisaggregationDecider) isDisaggregationRequired(_ context.Context, _ *types.CycleState,
-	_ int, _ k8stypes.NamespacedName) bool {
+	_ int, _ types.Pod) bool {
 	return true
 }
