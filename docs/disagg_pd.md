@@ -49,8 +49,8 @@ This evolved version removes the requirement for sidecars on the **prefill node*
    - Decode sidecar coordinates:
      - If `x-prefiller-host-port` header doesn't exist, runs both stages locally by passing request to local vLLM
      - If `x-prefiller-host-port` header exists:
-       - Sends prefill job to Prefill Worker with a special request field `do_remote_decode=true`
-       - Upon receiving response from Prefill Worker runs decode stage
+       - Sends the prefill job to the selected Prefill Worker with a special request field `do_remote_decode=true`
+       - Upon receiving the response from the Prefill Worker runs the decode stage
 
 4. **Response Flow**
    - Response flows from decode sidecar → Envoy → EPP → User
@@ -70,15 +70,15 @@ sequenceDiagram
 
 
   C->>I: Inference Request
-  I->>DS: Request routes to the Decode Worker Sidecar <br/> with a picked P worker set in a header.
+  I->>DS: Request is sent to the Decode Worker Sidecar <br/> with the selected Prefill worker set in a header.
   DS->>P: Remote Prefill with prompt(max_tokens=1)
   P-->>P: Run prefill
   P->>DS: Remote kv parameters
-  DS->> D: Request routes to the Decode Worker (vLLM) with remote_prefill true, <br/>prefill ID and memory block IDs 
+  DS->> D: Request is sent to the Decode Worker (vLLM) with remote_prefill true, <br/>prefill ID and memory block IDs 
         D-->>P: Read kv-cache
         D-->>D: Schedule decode into queue & run decode
-  D->>DS: Decode Tokens
-  DS->>I: Decode Tokens
+  D->>DS: Inference Response
+  DS->>I: Inference Response
   I->>C: Inference Response
 ```
 
@@ -86,7 +86,7 @@ sequenceDiagram
 
 - Receives EPP metadata (decode pod, optional prefill pod)
 - Sends request to prefill
-- Waits for and validates result
+- Waits for the result and validates it
 - Launches local decode job
 - Sends final response
 
