@@ -47,9 +47,9 @@ This evolved version removes the requirement for sidecars on the **prefill node*
 3. **Execution**
    - Request lands on Decode Worker (as selected by EPP)
    - Decode sidecar coordinates:
-     - If `prefill_worker_id == nil`, runs both stages locally by passing request to local vllm
-     - If split:
-       - Sends prefill job to Prefill Worker with a special header `do_remote_decode=true`
+     - If `x-prefiller-host-port` header doesn't exist, runs both stages locally by passing request to local vLLM
+     - If `x-prefiller-host-port` header exists:
+       - Sends prefill job to Prefill Worker with a special request field `do_remote_decode=true`
        - Upon receiving response from Prefill Worker runs decode stage
 
 4. **Response Flow**
@@ -58,6 +58,29 @@ This evolved version removes the requirement for sidecars on the **prefill node*
 ---
 
 ## Architectural Details
+
+
+```mermaid
+sequenceDiagram
+  participant C as Client
+  participant I as Inference Gateway
+  participant DS as Decode Worker Sidecar
+  participant D as Decode Worker(vLLM)
+  participant P as Prefill Worker(vLLM)
+
+
+  C->>I: Inference Request
+  I->>DS: Request routes to the Decode Worker Sidecar <br/> with a picked P worker set in a header.
+  DS->>P: Remote Prefill with prompt(max_tokens=1)
+  P-->>P: Run prefill
+  P->>DS: Remote kv parameters
+  DS->> D: Request routes to the Decode Worker(vLLM) with remote_prefill true, prefill ID and memory block IDs 
+        D-->>P: Read kv-cache
+        D-->>D: Schedule decode into queue & run decode
+  D->>DS: Decode Tokens
+  DS->>I: Decode Tokens
+  I->>C: Decode Tokens
+```
 
 ### Sidecar Responsibilities (Decode Only)
 
@@ -73,12 +96,8 @@ This evolved version removes the requirement for sidecars on the **prefill node*
 
 ## Worker Selection Logic
 
-- **Decode Worker**:
-  - Prefer longest prefix match / KV cache utilization (depends on available scorers)
-
-- **Prefill Worker**:
-  - High prefix-cache hit rate
-  - Low load
+- **Decode/Prefill Worker**:
+  - Prefer longest prefix match / KV cache utilization (depends on available scorers) and low load
 
 > **Skip prefill worker** when:
 > - Prefix match/kv cache hit is high
@@ -86,18 +105,10 @@ This evolved version removes the requirement for sidecars on the **prefill node*
 
 ---
 
-## vLLM and LMCache Integration
-
-- **vLLM changes** (or wrapper APIs):
-  - `save()`, `load()` APIs
-  - `done_sending`, `done_receiving`
-  - Connector API supporting async transfer
-
----
 
 ## Drawbacks & Limitations
 
-- Slight increase in TTFT for split P/D
+- Slight increase in TTFT for disaggregated P/D 
 - Possibility of stranded memory on prefill crash
 - Need for timeout and retry logic
 
@@ -159,7 +170,8 @@ plugins:
       validValues: ["decode"]
   - type: prefix-cache-scorer
     parameters:
-      hashBlockSize: 5
+      autoTune: false
+      blockSize: 5
       maxPrefixBlocksToMatch: 256
       lruCapacityPerServer: 31250
   - type: max-score-picker
@@ -175,13 +187,11 @@ schedulingProfiles:
       - pluginRef: "prefill-pods"
       - pluginRef: "max-score-picker"
       - pluginRef: "prefix-cache-scorer"
-        weight: 2
   - name: decode
     plugins:
       - pluginRef: "decode-pods"
       - pluginRef: "max-score-picker"
       - pluginRef: "prefix-cache-scorer"
-        weight: 2
 ```
 
 ---
