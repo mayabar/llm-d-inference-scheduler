@@ -1,8 +1,8 @@
-# Disaggregated Prefill/Decode Inference Serving in llm-d
+# Disaggregated Prefill/Decode Inference Serving in LLM-D
 
 ## Overview
 
-This document describes the architecture and request lifecycle for enabling **disaggregated prefill and decode (P/D)** inference execution in the llm-d router. The architecture aims to improve flexibility, scalability, and performance by enabling separation of prefill and decode stages onto different workers.
+This document describes the architecture and request lifecycle for enabling **disaggregated prefill and decode (P/D)** inference execution in the LLM-D router. The architecture aims to improve flexibility, scalability, and performance by enabling separation of prefill and decode stages onto different workers.
 
 This evolved version removes the requirement for sidecars on the **prefill node**, simplifying deployment while maintaining orchestration from the **decode node**.
 
@@ -25,7 +25,7 @@ This evolved version removes the requirement for sidecars on the **prefill node*
 | **Decode Worker**    | Handles decode stage and contains the sidecar for coordination       |
 | **Sidecar (Decode)** | Orchestrates communication with prefill worker and manages lifecycle |
 | **Envoy Proxy**      | Accepts OpenAI-style requests and forwards them to EPP               |
-| **EPP**              | End Point Picker, makes scheduling decisions                     |
+| **EPP**              | Endpoint Picker, makes scheduling decisions                     |
 
 ---
 
@@ -37,7 +37,7 @@ This evolved version removes the requirement for sidecars on the **prefill node*
 2. **EPP Scheduling Decision**
    - EPP evaluates:
      - Prompt length
-     - KV cache hit probability
+     - KV-cache hit probability
      - System and pod load
    - Selects either:
      - **Single node** path (decode handles all)
@@ -74,19 +74,19 @@ sequenceDiagram
   DS->>P: Remote Prefill with prompt(max_tokens=1)
   P-->>P: Run prefill
   P->>DS: Remote kv parameters
-  DS->> D: Request routes to the Decode Worker(vLLM) with remote_prefill true, prefill ID and memory block IDs 
+  DS->> D: Request routes to the Decode Worker (vLLM) with remote_prefill true, <br/>prefill ID and memory block IDs 
         D-->>P: Read kv-cache
         D-->>D: Schedule decode into queue & run decode
   D->>DS: Decode Tokens
   DS->>I: Decode Tokens
-  I->>C: Decode Tokens
+  I->>C: Inference Response
 ```
 
 ### Sidecar Responsibilities (Decode Only)
 
 - Receives EPP metadata (decode pod, optional prefill pod)
 - Sends request to prefill
-- Waits and validates result
+- Waits for and validates result
 - Launches local decode job
 - Sends final response
 
@@ -97,10 +97,10 @@ sequenceDiagram
 ## Worker Selection Logic
 
 - **Decode/Prefill Worker**:
-  - Prefer longest prefix match / KV cache utilization (depends on available scorers) and low load
+  - Prefer longest prefix match/kv-cache utilization (depends on available scorers) and low load
 
 > **Skip prefill worker** when:
-> - Prefix match/kv cache hit is high
+> - Prefix match/kv-cache hit is high
 > - Prompt is very short
 
 ---
@@ -110,7 +110,7 @@ sequenceDiagram
 
 - Slight increase in TTFT for disaggregated P/D 
 - Possibility of stranded memory on prefill crash
-- Need for timeout and retry logic
+- The need for timeout and retry logic
 
 ---
 
@@ -126,17 +126,17 @@ sequenceDiagram
 ## Future Considerations
 
 - Cache coordinate
-- Pre allocation of kv blocks in decode node , push cache from prefill to decode worker during calculation
+- Pre-allocation of kv blocks in the decode node, push cache from the prefill to the decode worker during calculation
 
 ---
 
 ## Integrating External Prefill/Decode Workloads
 
-The llm-d inference scheduler supports integration with external disaggregated prefill/decode (P/D) workloads other inference frameworks that follow the same P/D separation pattern but use **different Kubernetes Pod labeling conventions**.
+The LLM-D inference scheduler supports integration with external disaggregated prefill/decode (P/D) workloads other inference frameworks that follow the same P/D separation pattern but use **different Kubernetes Pod labeling conventions**.
 
 ### Labeling Convention Flexibility
 
-By default, llm-d uses the label key `llm-d.ai/role` with values:
+By default, LLM-D uses the label key `llm-d.ai/role` with values:
 - `"prefill"` → prefill-only pods
 - `"decode"` or `"both"` → decode-capable pods  
 
