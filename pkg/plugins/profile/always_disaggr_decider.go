@@ -9,40 +9,40 @@ import (
 )
 
 const (
-	// AlwaysDisaggrDeciderPluginType is the type-name of the alwaysDisaggrPDDecider plugin.
-	AlwaysDisaggrDeciderPluginType = "always-disaggr-pd-decider"
+	// AlwaysDisaggDeciderPluginType is the type-name of the alwaysDisaggPDDecider plugin.
+	AlwaysDisaggDeciderPluginType = "always-disagg-pd-decider"
 )
 
 // compile-time type assertion
-var _ pdDeciderPlugin = &AlwaysDisaggrPDDecider{}
+var _ pdDeciderPlugin = &AlwaysDisaggPDDecider{}
 
-// AlwaysDisaggrPDDecider is a PD decider plugin which always decide to disaggregate PD
-type AlwaysDisaggrPDDecider struct {
+// AlwaysDisaggPDDecider is a PD decider plugin which always decide to disaggregate PD
+type AlwaysDisaggPDDecider struct {
 	typedName plugin.TypedName
 }
 
-// AlwaysDisaggrPDDeciderPluginFactory defines the factory function for creating
-// a new instance of the AlwaysDisaggrPDDecider.
-func AlwaysDisaggrPDDeciderPluginFactory(name string, _ json.RawMessage,
+// AlwaysDisaggPDDeciderPluginFactory defines the factory function for creating
+// a new instance of the AlwaysDisaggPDDecider.
+func AlwaysDisaggPDDeciderPluginFactory(name string, _ json.RawMessage,
 	_ plugin.Handle) (plugin.Plugin, error) {
-	return newAlwaysDisaggrPDDecider().WithName(name), nil
+	return newAlwaysDisaggPDDecider().WithName(name), nil
 }
 
-func newAlwaysDisaggrPDDecider() *AlwaysDisaggrPDDecider {
-	return &AlwaysDisaggrPDDecider{}
+func newAlwaysDisaggPDDecider() *AlwaysDisaggPDDecider {
+	return &AlwaysDisaggPDDecider{}
 }
 
 // TypedName returns the typed name of the plugin.
-func (d *AlwaysDisaggrPDDecider) TypedName() plugin.TypedName {
+func (d *AlwaysDisaggPDDecider) TypedName() plugin.TypedName {
 	return d.typedName
 }
 
 // WithName sets the name of the plugin.
-func (d *AlwaysDisaggrPDDecider) WithName(name string) *AlwaysDisaggrPDDecider {
+func (d *AlwaysDisaggPDDecider) WithName(name string) *AlwaysDisaggPDDecider {
 	d.typedName.Name = name
 	return d
 }
 
-func (d *AlwaysDisaggrPDDecider) shouldDisaggregate(ctx context.Context, inputTokens int, endpoint scheduling.Endpoint) bool {
+func (d *AlwaysDisaggPDDecider) disaggregate(ctx context.Context, inputTokens int, endpoint scheduling.Endpoint) bool {
 	return true
 }

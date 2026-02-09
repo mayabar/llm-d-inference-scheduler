@@ -26,7 +26,7 @@ const (
 	defaultDecodeProfile     = "decode"
 	defaultPrefillProfile    = "prefill"
 	defaultPrefixPluginType  = prefix.PrefixCachePluginType
-	defaultDeciderPluginName = AlwaysDisaggrDeciderPluginType
+	defaultDeciderPluginName = AlwaysDisaggDeciderPluginType
 
 	// AverageCharactersPerToken is an estimated average characters per token, used since the request we cached is not tokenized.
 	AverageCharactersPerToken = 4
@@ -35,8 +35,8 @@ const (
 // pdDeciderPlugin interface for pd decider plugins
 type pdDeciderPlugin interface {
 	plugin.Plugin
-	// shouldDisaggregate checks if disaggregated PD is required for the given request and endpoint.
-	shouldDisaggregate(ctx context.Context, inputTokens int, endpoint scheduling.Endpoint) bool
+	// disaggregate checks if disaggregated PD is required for the given request and endpoint.
+	disaggregate(ctx context.Context, inputTokens int, endpoint scheduling.Endpoint) bool
 }
 
 type pdProfileHandlerParameters struct {
@@ -163,7 +163,7 @@ func (h *PdProfileHandler) Pick(ctx context.Context, _ *scheduling.CycleState, r
 		return nil
 	}
 
-	if h.decider != nil && h.decider.shouldDisaggregate(ctx, inputTokens, profileResults[h.decodeProfile].TargetEndpoints[0]) {
+	if h.decider != nil && h.decider.disaggregate(ctx, inputTokens, profileResults[h.decodeProfile].TargetEndpoints[0]) {
 		metrics.RecordPDDecision(request.TargetModel, metrics.DecisionTypePrefillDecode)
 		// run the prefill profile
 		return map[string]scheduling.SchedulerProfile{

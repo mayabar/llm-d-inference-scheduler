@@ -86,7 +86,7 @@ func (d *PrefixBasedPDDecider) WithName(name string) *PrefixBasedPDDecider {
 	return d
 }
 
-func (d *PrefixBasedPDDecider) shouldDisaggregate(ctx context.Context, inputTokens int, endpoint scheduling.Endpoint) bool {
+func (d *PrefixBasedPDDecider) disaggregate(ctx context.Context, inputTokens int, endpoint scheduling.Endpoint) bool {
 	logger := log.FromContext(ctx)
 	debugLogger := log.FromContext(ctx).V(logutil.DEBUG)
 
@@ -114,17 +114,17 @@ func (d *PrefixBasedPDDecider) shouldDisaggregate(ctx context.Context, inputToke
 		return false
 	}
 
-	// number of cached blocks
-	hitPrefixTokens := float64(prefixCacheMatchInfo.MatchBlocks() * prefixCacheMatchInfo.BlockSizeTokens())
-	// length of the cached part in percentages
-	hitPercentagePrefix := hitPrefixTokens / float64(inputTokens)
+	// number of cached tokens
+	hitPrefixTokens := prefixCacheMatchInfo.MatchBlocks() * prefixCacheMatchInfo.BlockSizeTokens()
+	// length of non-cached suffix in tokens
+	nonCachedTokens := inputTokens - hitPrefixTokens
+
 	debugLogger.Info("Computed hit percentage for prefix cache",
-		"hitPercentage", hitPercentagePrefix, "absolute hit prefix len (tokens)", hitPrefixTokens,
+		"absolute hit prefix len (tokens)", hitPrefixTokens,
 		"prompt length (token)", inputTokens)
 
-	if (1.0-hitPercentagePrefix)*float64(inputTokens) < float64(d.config.NonCachedTokens) {
-		debugLogger.Info("Non-cached suffix is smaller than threshold, using decode profile only",
-			"hitPercentage", hitPercentagePrefix)
+	if nonCachedTokens < d.config.NonCachedTokens {
+		debugLogger.Info("Non-cached suffix is smaller than threshold, using decode profile only")
 		return false // do not run prefill
 	}
 
