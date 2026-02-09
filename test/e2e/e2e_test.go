@@ -849,7 +849,7 @@ plugins:
 - type: prefill-header-handler
 - type: prefix-cache-scorer
   parameters:
-    blockSizeTokens: 4
+    blockSizeTokens: 16
     maxPrefixBlocksToMatch: 256
     lruCapacityPerServer: 256
 - type: prefill-filter
@@ -857,7 +857,7 @@ plugins:
 - type: max-score-picker
 - type: prefix-based-pd-decider
   parameters:
-    nonCachedTokens: 4
+    nonCachedTokens: 16
 - type: pd-profile-handler
   parameters:
     deciderPluginName: prefix-based-pd-decider
