@@ -97,3 +97,4 @@ spec:
               fieldPath: metadata.namespace
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
+      volumes: []

@@ -21,7 +21,6 @@ func createModelServersFromKustomize(kustomizeDir string, extra map[string]strin
 		"${MODEL_NAME}":              simModelName,
 		"${POOL_NAME}":               poolName,
 		"${VLLM_IMAGE}":              vllmSimImage,
-		"${UDS_TOKENIZER_IMAGE}":     udsTokenizerImage,
 		"${VLLM_RENDER_IMAGE}":       vllmRenderImage,
 		"${SIDECAR_IMAGE}":           sideCarImage,
 		"${VLLM_DATA_PARALLEL_SIZE}": "1",
