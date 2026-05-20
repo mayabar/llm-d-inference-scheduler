@@ -145,8 +145,7 @@ func runKustomize(kustomizeDir string) []string {
 	session, err := gexec.Start(command, nil, ginkgo.GinkgoWriter)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	gomega.Eventually(session).WithTimeout(600 * time.Second).Should(gexec.Exit(0))
-	res := strings.Split(string(session.Out.Contents()), "\n---")
-	return res
+	return strings.Split(string(session.Out.Contents()), "\n---")
 }
 
 // removeEmptyArgs strips YAML list items that are empty strings after variable
