@@ -188,6 +188,98 @@ func removeEmptyLabels(inputs []string) []string {
 	return outputs
 }
 
+func isModelReal(modelName string) bool {
+	url := "https://huggingface.co/api/models/" + modelName
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	return resp.StatusCode == http.StatusOK
+}
+
+// removeSidecarIfSimulated strips the vllm-render init container and the orphaned
+// model-cache volume from all manifests when running against a simulated (non-real) model.
+func removeSidecarIfSimulated(inputs []string) []string {
+	outputs := make([]string, len(inputs))
+	for idx, input := range inputs {
+		lines := strings.Split(input, "\n")
+		lines = removeListItemByName(lines, "vllm-render")
+		lines = removeListItemByName(lines, "model-cache")
+		outputs[idx] = strings.Join(lines, "\n")
+	}
+	return outputs
+}
+
+// removeListItemByName removes YAML list items whose direct `name:` field equals nameValue.
+// It buffers each item bounded by its leading "- " indent, then discards the buffer if the
+// name matches. The name check is limited to indent+2 (direct fields) to avoid matching
+// nested sub-items (e.g. volumeMount name inside a container block).
+func removeListItemByName(lines []string, nameValue string) []string {
+	result := make([]string, 0, len(lines))
+	var buf []string
+	itemIndent := -1
+	isTarget := false
+
+	flush := func() {
+		if !isTarget {
+			result = append(result, buf...)
+		}
+		buf = nil
+		isTarget = false
+		itemIndent = -1
+	}
+
+	for _, line := range lines {
+		stripped := strings.TrimLeft(line, " ")
+		if stripped == "" {
+			if itemIndent >= 0 {
+				buf = append(buf, line)
+			} else {
+				result = append(result, line)
+			}
+			continue
+		}
+		indent := len(line) - len(stripped)
+		isListStart := strings.HasPrefix(stripped, "- ")
+
+		switch {
+		case isListStart && (itemIndent < 0 || indent == itemIndent):
+			// First item or sibling at the same level.
+			if itemIndent >= 0 {
+				flush()
+			}
+			itemIndent = indent
+			buf = []string{line}
+			// Inline name: "- name: <value>"
+			if strings.TrimSpace(strings.TrimPrefix(stripped, "- ")) == "name: "+nameValue {
+				isTarget = true
+			}
+		case isListStart && itemIndent >= 0 && indent < itemIndent:
+			// List item at a shallower level — we've left the tracked list.
+			flush()
+			result = append(result, line)
+		case itemIndent >= 0 && indent <= itemIndent && !isListStart:
+			// Non-list line at or above item indent — end of list.
+			flush()
+			result = append(result, line)
+		case itemIndent >= 0:
+			// Content line inside the tracked item.
+			buf = append(buf, line)
+			// Own-line name field at exactly indent+2 (direct child, not nested).
+			if indent == itemIndent+2 && stripped == "name: "+nameValue {
+				isTarget = true
+			}
+		default:
+			result = append(result, line)
+		}
+	}
+	flush()
+	return result
+}
+
 func substituteMany(inputs []string, substitutions map[string]string) []string {
 	outputs := make([]string, len(inputs))
 	for idx, input := range inputs {

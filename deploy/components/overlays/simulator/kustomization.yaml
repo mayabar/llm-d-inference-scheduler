@@ -76,13 +76,13 @@ patches:
         name: model-cache
         emptyDir: {}
 # --- Prefill and Encode deployments (vllm-p, vllm-e) ---
-# No initContainers in base, so create the array
+# initContainers: [] in base, so append with /-
 - target:
     kind: Deployment
     name: "vllm-[pe]"
   patch: |
     - op: add
-      path: /spec/template/spec/initContainers
+      path: /spec/template/spec/initContainers/-
       value:
         name: vllm-render
         image: ${VLLM_RENDER_IMAGE}

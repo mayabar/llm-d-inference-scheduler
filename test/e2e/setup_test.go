@@ -37,11 +37,16 @@ func createModelServersFromKustomize(kustomizeDir string, extra map[string]strin
 	for k, v := range extra {
 		subs[k] = v
 	}
+
 	manifests := runKustomize(kustomizeDir)
 	manifests = substituteMany(manifests, subs)
 	// Remove labels with empty values (produced when ${DECODE_ROLE} is empty)
 	manifests = removeEmptyLabels(manifests)
 	manifests = removeEmptyArgs(manifests)
+	// remove render sidecar if model is simulated
+	if !isModelReal(subs["${MODEL_NAME}"]) {
+		manifests = removeSidecarIfSimulated(manifests)
+	}
 	objects := testutils.CreateObjsFromYaml(testConfig, manifests)
 	podsInDeploymentsReady(objects)
 	return objects
