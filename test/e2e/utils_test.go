@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	testutils "github.com/llm-d/llm-d-router/test/utils"
+
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -363,11 +365,11 @@ func getPodRequestCount(podName string) int {
 
 // parseRequestCountFromMetrics extracts the request count from Prometheus metrics output.
 func parseRequestCountFromMetrics(metricsOutput string) int {
-	// Look for vllm:e2e_request_latency_seconds_count{model_name="food-review"} <count>
+	// Look for vllm:e2e_request_latency_seconds_count{model_name="<model name>"} <count>
 	lines := strings.Split(metricsOutput, "\n")
 	for _, line := range lines {
 		if strings.Contains(line, "vllm:e2e_request_latency_seconds_count") &&
-			strings.Contains(line, "food-review") {
+			strings.Contains(line, testutils.ModelName) {
 			// Extract the count value after the last space
 			parts := strings.Fields(line)
 			if len(parts) >= 2 {

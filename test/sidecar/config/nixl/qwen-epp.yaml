@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: qwen2-0-5b-epp
+  name: vllm-qwen3-2b-instruct-epp
   labels:
-    app: qwen2-0-5b-epp
+    app: vllm-qwen3-2b-instruct-epp
 spec:
   selector:
     matchLabels:
-      app: qwen2-0-5b-epp
+      app: vllm-qwen3-2b-instruct-epp
   template:
     metadata:
       labels:
-        app: qwen2-0-5b-epp
+        app: vllm-qwen3-2b-instruct-epp
     spec:
       containers:
         - args:
             - --poolName
-            - qwen2-0-5b
+            - qwen3-2b-instruct
             - --poolNamespace
             - serverless-workstream
             - -v

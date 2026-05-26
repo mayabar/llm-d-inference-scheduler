@@ -37,6 +37,8 @@ import (
 	"github.com/llm-d/llm-d-router/apix/v1alpha2"
 	"github.com/llm-d/llm-d-router/pkg/epp/util/env"
 	igwtestutils "github.com/llm-d/llm-d-router/test/utils/igw"
+
+	"github.com/llm-d/llm-d-router/test/utils"
 )
 
 const (
@@ -46,18 +48,14 @@ const (
 	defaultCurlInterval = time.Second * 5
 	// defaultNsName is the default name of the Namespace used for tests. Can override using the E2E_NS environment variable.
 	defaultNsName = "inf-ext-e2e"
-	// modelServerName is the name of the model server test resources.
-	modelServerName = "vllm-qwen3-32b"
-	// modelName is the test model name.
-	modelName = "food-review"
 	// targetModelName is the target model name of the test model server.
-	targetModelName = modelName + "-1"
+	targetModelName = utils.ModelName + "-1"
 	// envoyName is the name of the envoy proxy test resources.
 	envoyName = "envoy"
 	// envoyPort is the listener port number of the test envoy proxy.
 	envoyPort = "8081"
 	// inferExtName is the name of the inference extension test resources.
-	inferExtName = "vllm-qwen3-32b-epp"
+	inferExtName = utils.ModelServerName + "-epp"
 	// metricsReaderSecretName is the name of the metrics reader secret which stores sa token to read epp metrics.
 	metricsReaderSecretName = "inference-gateway-sa-metrics-reader-secret"
 	// clientManifest is the manifest for the client test resources.

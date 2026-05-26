@@ -2,14 +2,14 @@ apiVersion: inference.networking.k8s.io/v1
 kind: InferencePool
 metadata:
   labels:
-  name: vllm-qwen3-32b
+  name: vllm-qwen3-2b-instruct
 spec:
   targetPorts:
    - number: 8000
   selector:
-    app: vllm-qwen3-32b
+    app: vllm-qwen3-2b-instruct
   endpointPickerRef:
-    name: vllm-qwen3-32b-epp
+    name: vllm-qwen3-2b-instruct-epp
     namespace: $E2E_NS
     kind: Service
     port:
@@ -18,11 +18,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: vllm-qwen3-32b-epp
+  name: vllm-qwen3-2b-instruct-epp
   namespace: $E2E_NS
 spec:
   selector:
-    app: vllm-qwen3-32b-epp
+    app: vllm-qwen3-2b-instruct-epp
   ports:
     - protocol: TCP
       port: 9002
@@ -33,7 +33,7 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: vllm-qwen3-32b-epp
+  name: vllm-qwen3-2b-instruct-epp
   namespace: $E2E_NS
 ---
 kind: Role
@@ -75,7 +75,7 @@ metadata:
   namespace: $E2E_NS
 subjects:
 - kind: ServiceAccount
-  name: vllm-qwen3-32b-epp
+  name: vllm-qwen3-2b-instruct-epp
   namespace: $E2E_NS
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -89,7 +89,7 @@ metadata:
   namespace: $E2E_NS
 subjects:
 - kind: ServiceAccount
-  name: vllm-qwen3-32b-epp
+  name: vllm-qwen3-2b-instruct-epp
   namespace: $E2E_NS
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -120,7 +120,7 @@ metadata:
   name: auth-reviewer-binding
 subjects:
 - kind: ServiceAccount
-  name: vllm-qwen3-32b-epp
+  name: vllm-qwen3-2b-instruct-epp
   namespace: $E2E_NS
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -150,21 +150,21 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: vllm-qwen3-32b-epp
+  name: vllm-qwen3-2b-instruct-epp
   namespace: $E2E_NS
   labels:
-    app: vllm-qwen3-32b-epp
+    app: vllm-qwen3-2b-instruct-epp
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: vllm-qwen3-32b-epp
+      app: vllm-qwen3-2b-instruct-epp
   template:
     metadata:
       labels:
-        app: vllm-qwen3-32b-epp
+        app: vllm-qwen3-2b-instruct-epp
     spec:
-      serviceAccountName: vllm-qwen3-32b-epp
+      serviceAccountName: vllm-qwen3-2b-instruct-epp
       # Conservatively, this timeout should mirror the longest grace period of the pods within the pool
       terminationGracePeriodSeconds: 130
       containers:
@@ -173,7 +173,7 @@ spec:
         imagePullPolicy: IfNotPresent
         args:
         - --pool-name
-        - "vllm-qwen3-32b"
+        - "vllm-qwen3-2b-instruct"
         - --pool-namespace
         - "$E2E_NS"
         - --v

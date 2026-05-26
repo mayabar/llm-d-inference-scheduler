@@ -11,6 +11,8 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
+
+	testutils "github.com/llm-d/llm-d-router/test/utils"
 )
 
 func newOpenAIClient() *openai.Client {
@@ -136,7 +138,7 @@ func runChatCompletionWithImages(imageURLs ...string) (string, string) {
 		sb.WriteString(fmt.Sprintf(`{"type":"image_url","image_url":{"url":%q},"uuid":"image-%d"},`, url, i))
 	}
 	body := fmt.Sprintf(`{"model":%q,"messages":[{"role":"user","content":[%s{"type":"text","text":"Describe what you see."}]}],"max_tokens":150}`,
-		simModelName, sb.String())
+		testutils.ModelName, sb.String())
 	return runRawChatCompletion(body)
 }
 
@@ -145,7 +147,7 @@ func runChatCompletionWithImages(imageURLs ...string) (string, string) {
 func runChatCompletionWithVideo() (string, string) {
 	ginkgo.By("Sending Multimodal Chat Completion Request with video: " + testVideoURL)
 	body := fmt.Sprintf(`{"model":%q,"messages":[{"role":"user","content":[{"type":"text","text":"What is happening in this video?"},{"type":"video_url","video_url":{"url":%q}}]}]}`,
-		simModelName, testVideoURL)
+		testutils.ModelName, testVideoURL)
 	return runRawChatCompletion(body)
 }
 
@@ -156,7 +158,7 @@ func runChatCompletionWithVideo() (string, string) {
 func runChatCompletionWithImageEmbeds() (string, string) {
 	ginkgo.By("Sending Chat Completion Request with image_embeds")
 	body := fmt.Sprintf(`{"model":%q,"messages":[{"role":"user","content":[{"type":"text","text":"Describe this embedded image:"},{"type":"image_embeds","image_embeds":%q,"uuid":"embedded-image-1"}]}]}`,
-		simModelName, testImageEmbeds)
+		testutils.ModelName, testImageEmbeds)
 	return runRawChatCompletion(body)
 }
 
@@ -166,7 +168,7 @@ func runChatCompletionWithImageEmbeds() (string, string) {
 func runChatCompletionWithAudio() (string, string) {
 	ginkgo.By("Sending Chat Completion Request with input_audio")
 	body := fmt.Sprintf(`{"model":%q,"messages":[{"role":"user","content":[{"type":"text","text":"What is being said in this audio clip?"},{"type":"input_audio","input_audio":{"data":%q,"format":"wav"}}]}],"max_tokens":100}`,
-		simModelName, testAudioData)
+		testutils.ModelName, testAudioData)
 	return runRawChatCompletion(body)
 }
 
@@ -180,7 +182,7 @@ func runStreamingCompletion(prompt string, theModel openai.CompletionNewParamsMo
 
 func runStreamingChatCompletion(prompt string) (string, string) {
 	ginkgo.By(fmt.Sprintf("Sending Streaming Chat Completion Request: (port %s)", port))
-	body := fmt.Sprintf(`{"model":"%s","messages":[{"role":"user","content":"%s"}],"stream":true}`, simModelName, prompt)
+	body := fmt.Sprintf(`{"model":"%s","messages":[{"role":"user","content":"%s"}],"stream":true}`, testutils.ModelName, prompt)
 	ns, pod, respBody := doPost("/v1/chat/completions", body, nil)
 	ginkgo.By(fmt.Sprintf("Streaming Chat Completion received response length: %d bytes", len(respBody)))
 	return ns, pod
@@ -191,7 +193,7 @@ func runStreamingChatCompletion(prompt string) (string, string) {
 // Returns namespace header, pod header, and the finish reason from the response.
 func runCompletionWithCacheThreshold(prompt string, cacheHitThreshold float64, forceCacheThresholdFinishReason bool) (string, string, string) {
 	ginkgo.By(fmt.Sprintf("Sending Completion Request with cache_hit_threshold=%v, forceCacheThreshold=%v", cacheHitThreshold, forceCacheThresholdFinishReason))
-	body := fmt.Sprintf(`{"model":"%s","prompt":"%s","max_tokens":10,"cache_hit_threshold":%v}`, simModelName, prompt, cacheHitThreshold)
+	body := fmt.Sprintf(`{"model":"%s","prompt":"%s","max_tokens":10,"cache_hit_threshold":%v}`, testutils.ModelName, prompt, cacheHitThreshold)
 	extraHeaders := cacheThresholdHeaders(forceCacheThresholdFinishReason)
 	ns, pod, respBody := doPost("/v1/completions", body, extraHeaders)
 	finishReason := extractFinishReason(string(respBody))
@@ -202,7 +204,7 @@ func runCompletionWithCacheThreshold(prompt string, cacheHitThreshold float64, f
 // runStreamingCompletionWithCacheThreshold sends a streaming completion request with cache_hit_threshold.
 func runStreamingCompletionWithCacheThreshold(prompt string, cacheHitThreshold float64, forceCacheThresholdFinishReason bool) (string, string, string) {
 	ginkgo.By(fmt.Sprintf("Sending Streaming Completion Request with cache_hit_threshold=%v, forceCacheThreshold=%v", cacheHitThreshold, forceCacheThresholdFinishReason))
-	body := fmt.Sprintf(`{"model":"%s","prompt":"%s","max_tokens":10,"stream":true,"cache_hit_threshold":%v}`, simModelName, prompt, cacheHitThreshold)
+	body := fmt.Sprintf(`{"model":"%s","prompt":"%s","max_tokens":10,"stream":true,"cache_hit_threshold":%v}`, testutils.ModelName, prompt, cacheHitThreshold)
 	extraHeaders := cacheThresholdHeaders(forceCacheThresholdFinishReason)
 	ns, pod, respBody := doPost("/v1/completions", body, extraHeaders)
 	finishReason := extractFinishReasonFromStreaming(string(respBody))

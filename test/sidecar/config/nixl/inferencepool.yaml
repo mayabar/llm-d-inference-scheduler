@@ -1,14 +1,14 @@
 apiVersion: inference.networking.k8s.io/v1
 kind: InferencePool
 metadata:
-  name: qwen2-0-5b
+  name: vllm-qwen3-2b-instruct
 spec:
   selector:
     matchLabels:
       llm-d.ai/inference-serving: "true"
-      llm-d.ai/model: qwen2-0-5b
+      llm-d.ai/model: qwen3-2b-instruct
   endpointPickerRef:
-    name: qwen2-0-5b-epp
+    name: vllm-qwen3-2b-instruct-epp
     kind: Service
     port:
       number: 9002

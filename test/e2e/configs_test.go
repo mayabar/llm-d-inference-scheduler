@@ -1,5 +1,9 @@
 package e2e
 
+import (
+	"github.com/llm-d/llm-d-router/test/utils"
+)
+
 // Simple EPP configuration for running without P/D
 const simpleConfig = `apiVersion: llm-d.ai/v1alpha1
 kind: EndpointPickerConfig
@@ -185,7 +189,7 @@ kind: EndpointPickerConfig
 plugins:
 - type: token-producer
   parameters:
-    modelName: Qwen/Qwen2.5-1.5B-Instruct
+    modelName: ` + utils.ModelName + `
     vllm:
       url: http://localhost:8000
 - type: precise-prefix-cache-scorer
@@ -217,7 +221,7 @@ kind: EndpointPickerConfig
 plugins:
 - type: token-producer
   parameters:
-    modelName: Qwen/Qwen2.5-1.5B-Instruct
+    modelName: ` + utils.ModelName + `
     vllm:
       url: http://localhost:8000
 - type: precise-prefix-cache-scorer

@@ -18,7 +18,7 @@ import (
 
 func createModelServersFromKustomize(kustomizeDir string, extra map[string]string) []string {
 	subs := map[string]string{
-		"${MODEL_NAME}":              simModelName,
+		"${MODEL_NAME}":              testutils.ModelName,
 		"${POOL_NAME}":               poolName,
 		"${VLLM_IMAGE}":              vllmSimImage,
 		"${VLLM_RENDER_IMAGE}":       vllmRenderImage,
@@ -61,7 +61,7 @@ func createModelServersDecode(replicas int) []string {
 
 func createModelServersDecodeKV(replicas int) []string {
 	return createModelServersFromKustomize(epdDeploymentDir, map[string]string{
-		"${MODEL_NAME}":           kvModelName,
+		"${MODEL_NAME}":           testutils.ModelName,
 		"${KV_CACHE_ENABLED}":     "true",
 		"${VLLM_REPLICA_COUNT_D}": strconv.Itoa(replicas),
 	})
@@ -147,9 +147,9 @@ func createEndPointPicker(eppConfig string) []string {
 			"${VLLM_RENDER_IMAGE}": vllmRenderImage,
 			// The render sidecar needs a real, fetchable model. Sim tests
 			// don't query it; the cost is paying weights-load on every EPP.
-			"${MODEL_NAME}":            kvModelName,
+			"${MODEL_NAME}":            testutils.ModelName,
 			"${NAMESPACE}":             nsName,
-			"${POOL_NAME}":             simModelName + "-inference-pool",
+			"${POOL_NAME}":             testutils.ModelServerName + "-inference-pool",
 			"${METRICS_ENDPOINT_AUTH}": "false",
 		})
 

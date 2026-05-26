@@ -13,6 +13,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	testutil "github.com/llm-d/llm-d-router/pkg/epp/util/testing"
 )
 
 type inferenceResponse struct {
@@ -26,7 +28,7 @@ type inferenceChoice struct {
 
 func TestEndpointPickerBasics(t *testing.T) {
 	inferenceURL := fmt.Sprintf("%s/v1/completions", gatewayURL)
-	jsonData := []byte(`{"model":"food-review","prompt":"hi","max_tokens":10,"temperature":0}`)
+	jsonData := []byte(`{"model":"` + utils.ModelName + `","prompt":"hi","max_tokens":10,"temperature":0}`)
 
 	t.Logf("sending POST to %s: %s", inferenceURL, jsonData)
 	resp, err := http.Post(inferenceURL, "application/json", bytes.NewBuffer(jsonData))
@@ -45,7 +47,7 @@ func TestEndpointPickerBasics(t *testing.T) {
 	t.Logf("checking HTTP response body: %s", respBytes)
 	infResp := inferenceResponse{}
 	require.NoError(t, json.Unmarshal(respBytes, &infResp))
-	assert.Equal(t, "food-review", infResp.Model)
+	assert.Equal(t, testutil.ModelName, infResp.Model)
 	require.True(t, len(infResp.Choices) > 0)
 	assert.NotEmpty(t, infResp.Choices[0].Text)
 }

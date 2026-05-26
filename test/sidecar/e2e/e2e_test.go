@@ -25,11 +25,12 @@ import (
 	. "github.com/onsi/gomega"    //nolint:revive
 
 	"github.com/llm-d/llm-d-router/test/sidecar/utils"
+	tutils "github.com/llm-d/llm-d-router/test/utils"
 )
 
 const (
 	namespace   = "hc4ai-operator"
-	qwenPodName = "qwen2-0--5b"
+	qwenPodName = tutils.ModelName
 )
 
 var _ = Describe("Sidecar", Ordered, func() {

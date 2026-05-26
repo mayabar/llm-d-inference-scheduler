@@ -42,7 +42,7 @@ const (
 )
 
 var (
-	poolName              = simModelName + "-inference-pool"
+	poolName              = testutils.ModelServerName + "-inference-pool"
 	podSelector           = map[string]string{"app": poolName}
 	prefillSelector       = map[string]string{"llm-d.ai/role": "prefill"}
 	decodeSelector        = map[string]string{"llm-d.ai/role": "decode"}
@@ -64,11 +64,11 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			gomega.Expect(prefillPods).Should(gomega.BeEmpty())
 			gomega.Expect(decodePods).Should(gomega.HaveLen(1))
 
-			nsHdr, podHdr, _ := runCompletion(simplePrompt, simModelName)
+			nsHdr, podHdr, _ := runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.Equal(decodePods[0]))
 
-			nsHdr, podHdr, _ = runChatCompletion(simplePrompt, simModelName)
+			nsHdr, podHdr, _ = runChatCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.Equal(decodePods[0]))
 
@@ -98,42 +98,42 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			gomega.Expect(prefillPods).Should(gomega.HaveLen(prefillReplicas))
 			gomega.Expect(decodePods).Should(gomega.HaveLen(decodeReplicas))
 
-			nsHdr, podHdrCompletion, _ := runCompletion(simplePrompt, simModelName)
+			nsHdr, podHdrCompletion, _ := runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdrCompletion).Should(gomega.BeElementOf(decodePods))
 
-			nsHdr, podHdrChat, _ := runChatCompletion(simplePrompt, simModelName)
+			nsHdr, podHdrChat, _ := runChatCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdrChat).Should(gomega.BeElementOf(decodePods))
 
 			// Do an extra completion call with a different prompt
-			nsHdr, podHdr, _ := runCompletion(extraPrompt, simModelName)
+			nsHdr, podHdr, _ := runCompletion(extraPrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 
 			// Run completion with the original prompt
-			nsHdr, podHdr, _ = runCompletion(simplePrompt, simModelName)
+			nsHdr, podHdr, _ = runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 			gomega.Expect(podHdr).Should(gomega.Equal(podHdrCompletion))
 
 			// Do an extra chat completion call with a different prompt
-			nsHdr, podHdr, _ = runChatCompletion(extraPrompt, simModelName)
+			nsHdr, podHdr, _ = runChatCompletion(extraPrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 
 			// Run chat completion with the original prompt
-			nsHdr, podHdr, _ = runChatCompletion(simplePrompt, simModelName)
+			nsHdr, podHdr, _ = runChatCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 			gomega.Expect(podHdr).Should(gomega.Equal(podHdrChat))
 
 			// Metrics Validation
-			labelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypePrefillDecode, simModelName)
+			labelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypePrefillDecode, testutils.ModelName)
 			prefillDecodeCount := getCounterMetric(metricsURL, "llm_d_inference_scheduler_pd_decision_total", labelFilter)
 			prefillDecodeCountllmDRouterEpp := getCounterMetric(metricsURL, "llm_d_router_epp_pd_decision_total", labelFilter)
 
-			labelFilter2 := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeDecodeOnly, simModelName)
+			labelFilter2 := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeDecodeOnly, testutils.ModelName)
 			decodeOnlyCount := getCounterMetric(metricsURL, "llm_d_inference_scheduler_pd_decision_total", labelFilter2)
 			decodeOnlyCountllmDRouterEpp := getCounterMetric(metricsURL, "llm_d_router_epp_pd_decision_total", labelFilter2)
 
@@ -170,22 +170,22 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 				gomega.Expect(decodePods).Should(gomega.HaveLen(decodeReplicas))
 
 				// Test regular completion request
-				nsHdr, podHdrCompletion, _ := runCompletion(simplePrompt, simModelName)
+				nsHdr, podHdrCompletion, _ := runCompletion(simplePrompt, testutils.ModelName)
 				gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 				gomega.Expect(podHdrCompletion).Should(gomega.BeElementOf(decodePods))
 
 				// Test regular chat completion request
-				nsHdr, podHdrChat, _ := runChatCompletion(simplePrompt, simModelName)
+				nsHdr, podHdrChat, _ := runChatCompletion(simplePrompt, testutils.ModelName)
 				gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 				gomega.Expect(podHdrChat).Should(gomega.BeElementOf(decodePods))
 
 				// Run completion with a different prompt
-				nsHdr, podHdr, _ := runCompletion(extraPrompt, simModelName)
+				nsHdr, podHdr, _ := runCompletion(extraPrompt, testutils.ModelName)
 				gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 				gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 
 				// Run completion with original prompt (should go to same pod due to prefix cache)
-				nsHdr, podHdr, _ = runCompletion(simplePrompt, simModelName)
+				nsHdr, podHdr, _ = runCompletion(simplePrompt, testutils.ModelName)
 				gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 				gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 				gomega.Expect(podHdr).Should(gomega.Equal(podHdrCompletion))
@@ -208,7 +208,7 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 				gomega.Expect(decodePods).Should(gomega.HaveLen(decodeReplicas))
 
 				// Test streaming completion request
-				nsHdr, podHdr := runStreamingCompletion(simplePrompt, simModelName)
+				nsHdr, podHdr := runStreamingCompletion(simplePrompt, testutils.ModelName)
 				gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 				gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 
@@ -218,7 +218,7 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 				gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 
 				// Run streaming completion with a different prompt
-				nsHdr, podHdr = runStreamingCompletion(extraPrompt, simModelName)
+				nsHdr, podHdr = runStreamingCompletion(extraPrompt, testutils.ModelName)
 				gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 				gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 
@@ -347,42 +347,42 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			gomega.Expect(prefillPods).Should(gomega.HaveLen(prefillReplicas))
 			gomega.Expect(decodePods).Should(gomega.HaveLen(decodeReplicas))
 
-			nsHdr, podHdrCompletion, _ := runCompletion(simplePrompt, simModelName)
+			nsHdr, podHdrCompletion, _ := runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdrCompletion).Should(gomega.BeElementOf(decodePods))
 
-			nsHdr, podHdrChat, _ := runChatCompletion(simplePrompt, simModelName)
+			nsHdr, podHdrChat, _ := runChatCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdrChat).Should(gomega.BeElementOf(decodePods))
 
 			// Do an extra completion call with a different prompt
-			nsHdr, podHdr, _ := runCompletion(extraPrompt, simModelName)
+			nsHdr, podHdr, _ := runCompletion(extraPrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 
 			// Run completion with the original prompt
-			nsHdr, podHdr, _ = runCompletion(simplePrompt, simModelName)
+			nsHdr, podHdr, _ = runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 			gomega.Expect(podHdr).Should(gomega.Equal(podHdrCompletion))
 
 			// Do an extra chat completion call with a different prompt
-			nsHdr, podHdr, _ = runChatCompletion(extraPrompt, simModelName)
+			nsHdr, podHdr, _ = runChatCompletion(extraPrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 
 			// Run chat completion with the original prompt
-			nsHdr, podHdr, _ = runChatCompletion(simplePrompt, simModelName)
+			nsHdr, podHdr, _ = runChatCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 			gomega.Expect(podHdr).Should(gomega.Equal(podHdrChat))
 
 			// Metrics Validation
-			labelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypePrefillDecode, simModelName)
+			labelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypePrefillDecode, testutils.ModelName)
 			prefillDecodeCount := getCounterMetric(metricsURL, "llm_d_inference_scheduler_disagg_decision_total", labelFilter)
 			prefillDecodeCountllmDRouterEpp := getCounterMetric(metricsURL, "llm_d_router_epp_disagg_decision_total", labelFilter)
 
-			labelFilter2 := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeDecodeOnly, simModelName)
+			labelFilter2 := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeDecodeOnly, testutils.ModelName)
 			decodeOnlyCount := getCounterMetric(metricsURL, "llm_d_inference_scheduler_disagg_decision_total", labelFilter2)
 			decodeOnlyCountllmDRouterEpp := getCounterMetric(metricsURL, "llm_d_router_epp_disagg_decision_total", labelFilter2)
 
@@ -408,11 +408,11 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			gomega.Expect(prefillPods).Should(gomega.BeEmpty())
 			gomega.Expect(decodePods).Should(gomega.HaveLen(1))
 
-			nsHdr, podHdr, _ := runCompletion(simplePrompt, simModelName)
+			nsHdr, podHdr, _ := runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.Equal(decodePods[0]))
 
-			nsHdr, podHdr, _ = runChatCompletion(simplePrompt, simModelName)
+			nsHdr, podHdr, _ = runChatCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.Equal(decodePods[0]))
 
@@ -442,7 +442,7 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			gomega.Expect(prefillDecodePods).Should(gomega.HaveLen(decodeReplicas))
 
 			// Text request: encode stage skipped, routed directly to a prefill-decode pod
-			nsHdr, podHdr, _ := runCompletion(simplePrompt, simModelName)
+			nsHdr, podHdr, _ := runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.BeElementOf(prefillDecodePods))
 
@@ -476,14 +476,14 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			gomega.Expect(podHdr).Should(gomega.BeElementOf(prefillDecodePods))
 
 			// Metrics: text + image_embeds requests recorded as decode-only (encode skipped)
-			decodeOnlyFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeDecodeOnly, simModelName)
+			decodeOnlyFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeDecodeOnly, testutils.ModelName)
 			decodeOnlyCount := getCounterMetric(metricsURL, "llm_d_inference_scheduler_disagg_decision_total", decodeOnlyFilter)
 			decodeOnlyCountllmDRouterEpp := getCounterMetric(metricsURL, "llm_d_router_epp_disagg_decision_total", decodeOnlyFilter)
 			gomega.Expect(decodeOnlyCount).Should(gomega.Equal(2))
 			gomega.Expect(decodeOnlyCountllmDRouterEpp).Should(gomega.Equal(2))
 
 			// Metrics: encode-decode decisions recorded (2 single-image + 1 multi-image + 1 video + 1 audio)
-			labelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeEncodeDecode, simModelName)
+			labelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeEncodeDecode, testutils.ModelName)
 			encodeDecodeCount := getCounterMetric(metricsURL, "llm_d_inference_scheduler_disagg_decision_total", labelFilter)
 			encodeDecodeCountllmDRouterEpp := getCounterMetric(metricsURL, "llm_d_router_epp_disagg_decision_total", labelFilter)
 			gomega.Expect(encodeDecodeCount).Should(gomega.Equal(5))
@@ -518,7 +518,7 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			gomega.Expect(decodePods).Should(gomega.HaveLen(decodeReplicas))
 
 			// Text request: encode stage skipped, prefill triggered by prefix-based-pd-decider
-			nsHdr, podHdr, _ := runCompletion(simplePrompt, simModelName)
+			nsHdr, podHdr, _ := runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 
@@ -548,8 +548,8 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			gomega.Expect(podHdr).Should(gomega.BeElementOf(decodePods))
 
 			// Metrics: text + image_embeds requests recorded as decode-only or prefill-decode (encode skipped)
-			pdLabelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypePrefillDecode, simModelName)
-			doLabelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeDecodeOnly, simModelName)
+			pdLabelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypePrefillDecode, testutils.ModelName)
+			doLabelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeDecodeOnly, testutils.ModelName)
 			pdCount := getCounterMetric(metricsURL, "llm_d_inference_scheduler_disagg_decision_total", pdLabelFilter)
 			pdCountllmDRouterEpp := getCounterMetric(metricsURL, "llm_d_router_epp_disagg_decision_total", pdLabelFilter)
 			doCount := getCounterMetric(metricsURL, "llm_d_inference_scheduler_disagg_decision_total", doLabelFilter)
@@ -561,8 +561,8 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			// Metrics: 4 multimodal requests each produce either encode-prefill-decode or encode-decode
 			// (encode-decode occurs if the prefix cache hits on the second same-image request).
 			// The 3 requests with unique content (1st image, multi-image, video) always produce encode-prefill-decode.
-			// epdLabelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeEncodePrefillDecode, simModelName)
-			// edLabelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeEncodeDecode, simModelName)
+			// epdLabelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeEncodePrefillDecode, testutils.ModelName)
+			// edLabelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeEncodeDecode, testutils.ModelName)
 			// epdCount := getCounterMetric(metricsURL, "llm_d_inference_scheduler_disagg_decision_total", epdLabelFilter)
 			// epdCountllmDRouterEpp := getCounterMetric(metricsURL, "llm_d_router_epp_disagg_decision_total", epdLabelFilter)
 			// edCount := getCounterMetric(metricsURL, "llm_d_inference_scheduler_disagg_decision_total", edLabelFilter)
@@ -599,18 +599,18 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			gomega.Expect(epdPods).Should(gomega.HaveLen(replicas))
 
 			// Text completion: encode skipped, routes to decode profile -> single deployment
-			nsHdr, podHdr, _ := runCompletion(simplePrompt, simModelName)
+			nsHdr, podHdr, _ := runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.Equal(epdPods[0]))
 
 			// Text chat completion: same routing as above
-			nsHdr, podHdr, _ = runChatCompletion(simplePrompt, simModelName)
+			nsHdr, podHdr, _ = runChatCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.Equal(epdPods[0]))
 
 			// Metrics: text requests recorded as decode-only or prefill-decode (encode skipped)
-			pdLabelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypePrefillDecode, simModelName)
-			doLabelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeDecodeOnly, simModelName)
+			pdLabelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypePrefillDecode, testutils.ModelName)
+			doLabelFilter := fmt.Sprintf(`decision_type=%q,model_name="%s"`, metrics.DecisionTypeDecodeOnly, testutils.ModelName)
 			pdCount := getCounterMetric(metricsURL, "llm_d_inference_scheduler_disagg_decision_total", pdLabelFilter)
 			pdCountllmDRouterEpp := getCounterMetric(metricsURL, "llm_d_router_epp_disagg_decision_total", pdLabelFilter)
 			doCount := getCounterMetric(metricsURL, "llm_d_inference_scheduler_disagg_decision_total", doLabelFilter)
@@ -657,7 +657,7 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			gomega.Expect(decodePods).Should(gomega.HaveLen(1))
 
 			for range 5 {
-				nsHdr, podHdr, _ := runCompletion(simplePrompt, kvModelName)
+				nsHdr, podHdr, _ := runCompletion(simplePrompt, testutils.ModelName)
 				gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 				gomega.Expect(podHdr).Should(gomega.Equal(decodePods[0]))
 			}
@@ -681,18 +681,18 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			gomega.Expect(decodePods).Should(gomega.HaveLen(1))
 
 			// Test completions
-			nsHdr, podHdr, _ := runCompletion(simplePrompt, kvModelName)
+			nsHdr, podHdr, _ := runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.Equal(decodePods[0]))
 
 			// Test chat completions
-			nsHdr, podHdr, _ = runChatCompletion(simplePrompt, kvModelName)
+			nsHdr, podHdr, _ = runChatCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.Equal(decodePods[0]))
 
 			// Repeat to verify prefix cache affinity with pre-tokenized prompts
 			for range 3 {
-				nsHdr, podHdr, _ = runCompletion(simplePrompt, kvModelName)
+				nsHdr, podHdr, _ = runCompletion(simplePrompt, testutils.ModelName)
 				gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 				gomega.Expect(podHdr).Should(gomega.Equal(decodePods[0]))
 			}
@@ -716,7 +716,7 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 
 			var nsHdr, podHdr string
 			for range 5 {
-				nsHdr, podHdr, _ = runCompletion(simplePrompt, simModelName)
+				nsHdr, podHdr, _ = runCompletion(simplePrompt, testutils.ModelName)
 				gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 				gomega.Expect(podHdr).Should(gomega.Equal(decodePods[0]))
 			}
@@ -730,7 +730,7 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			var scaledNsHdr, scaledPodHdr string
 			// Run inference multiple times until one is scheduled on the new pod
 			for range 30 {
-				scaledNsHdr, scaledPodHdr, _ = runCompletion(extraPrompt, simModelName)
+				scaledNsHdr, scaledPodHdr, _ = runCompletion(extraPrompt, testutils.ModelName)
 				gomega.Expect(scaledNsHdr).Should(gomega.Equal(nsName))
 				gomega.Expect(scaledPodHdr).Should(gomega.BeElementOf(scaledUpDecodePods))
 				if scaledPodHdr != podHdr {
@@ -748,7 +748,7 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 
 			// Run multiple times and insure that they are scheduled on the remaining pod
 			for range 5 {
-				nsHdr, podHdr, _ = runCompletion(simplePrompt, simModelName)
+				nsHdr, podHdr, _ = runCompletion(simplePrompt, testutils.ModelName)
 				gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 				gomega.Expect(podHdr).Should(gomega.Equal(scaledDownDecodePods[0]))
 			}
@@ -770,7 +770,7 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			gomega.Expect(prefillPods).Should(gomega.BeEmpty())
 			gomega.Expect(decodePods).Should(gomega.HaveLen(1))
 
-			nsHdr, podHdr, portHdr := runCompletion(simplePrompt, simModelName)
+			nsHdr, podHdr, portHdr := runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.Equal(decodePods[0]))
 
@@ -778,7 +778,7 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 
 			// Run inference multiple times until one is scheduled on the other port
 			for range 30 {
-				parallelNsHdr, parallelPodHdr, parallelPortHdr = runCompletion(extraPrompt, simModelName)
+				parallelNsHdr, parallelPodHdr, parallelPortHdr = runCompletion(extraPrompt, testutils.ModelName)
 				gomega.Expect(parallelNsHdr).Should(gomega.Equal(nsName))
 				gomega.Expect(parallelPodHdr).Should(gomega.Equal(decodePods[0]))
 				if parallelPortHdr != portHdr {
@@ -787,13 +787,13 @@ var _ = ginkgo.Describe("Run end to end tests", ginkgo.Ordered, func() {
 			}
 			gomega.Expect(parallelPortHdr).ShouldNot(gomega.Equal(portHdr))
 
-			nsHdr, podHdr, portHdr = runChatCompletion(simplePrompt, simModelName)
+			nsHdr, podHdr, portHdr = runChatCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			gomega.Expect(podHdr).Should(gomega.Equal(decodePods[0]))
 
 			// Run inference multiple times until one is scheduled on the other port
 			for range 30 {
-				parallelNsHdr, parallelPodHdr, parallelPortHdr = runChatCompletion(extraPrompt, simModelName)
+				parallelNsHdr, parallelPodHdr, parallelPortHdr = runChatCompletion(extraPrompt, testutils.ModelName)
 				gomega.Expect(parallelNsHdr).Should(gomega.Equal(nsName))
 				gomega.Expect(parallelPodHdr).Should(gomega.Equal(decodePods[0]))
 				if parallelPortHdr != portHdr {

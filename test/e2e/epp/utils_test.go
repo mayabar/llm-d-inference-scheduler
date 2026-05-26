@@ -38,6 +38,8 @@ import (
 	"github.com/llm-d/llm-d-router/apix/v1alpha2"
 	"github.com/llm-d/llm-d-router/pkg/epp/metadata"
 	igwtestutils "github.com/llm-d/llm-d-router/test/utils/igw"
+
+	testutils "github.com/llm-d/llm-d-router/test/utils"
 )
 
 const (
@@ -67,7 +69,7 @@ const (
 func newInferenceObjective(ns string) *v1alpha2.InferenceObjective {
 	return igwtestutils.MakeModelWrapper(types.NamespacedName{Name: "inferenceobjective-sample", Namespace: ns}).
 		SetPriority(2).
-		SetPoolRef(modelServerName).
+		SetPoolRef(testutils.ModelServerName).
 		Obj()
 }
 
@@ -115,7 +117,7 @@ func verifyTrafficRouting() {
 
 		// Skip embeddings API if server returns 404 (not all models support embeddings).
 		if t.api == apiEmbeddings {
-			probeCmd := getCurlCommand(envoyName, testConfig.NsName, envoyPort, modelName, curlTimeout, t.api, t.promptOrMessages, false)
+			probeCmd := getCurlCommand(envoyName, testConfig.NsName, envoyPort, testutils.ModelName, curlTimeout, t.api, t.promptOrMessages, false)
 			probeResp, probeErr := igwtestutils.ExecCommandInPod(testConfig, curlPodName, curlPodName, probeCmd)
 			if probeErr == nil && strings.Contains(probeResp, statusNotFound) {
 				ginkgo.Skip("Skipping " + apiEmbeddings + ": server returned 404 (embeddings may not be supported by this model)")
@@ -124,7 +126,7 @@ func verifyTrafficRouting() {
 
 		// Expected ports and client-facing model name (response model is rewritten back to the incoming name)
 		expectedPort := generateSequence(firstPort, numPorts)
-		expectedModel := []string{modelName}
+		expectedModel := []string{testutils.ModelName}
 
 		// Observed ports and InferenceObjective target models
 		actualModel := make(map[string]int)
@@ -157,7 +159,7 @@ func verifyTrafficRouting() {
 				currentPromptOrMessages = t.promptOrMessages
 			}
 
-			curlCmd := getCurlCommand(envoyName, testConfig.NsName, envoyPort, modelName, curlTimeout, t.api, currentPromptOrMessages, false)
+			curlCmd := getCurlCommand(envoyName, testConfig.NsName, envoyPort, testutils.ModelName, curlTimeout, t.api, currentPromptOrMessages, false)
 
 			var resp string
 			var err error
@@ -211,7 +213,7 @@ func verifyMetrics() {
 
 	// Generate traffic by sending requests through the inference extension.
 	ginkgo.By("Generating traffic through the inference extension")
-	curlCmd := getCurlCommand(envoyName, testConfig.NsName, envoyPort, modelName, curlTimeout, apiCompletions, testPrompt, true)
+	curlCmd := getCurlCommand(envoyName, testConfig.NsName, envoyPort, testutils.ModelName, curlTimeout, apiCompletions, testPrompt, true)
 
 	// Run the curl command multiple times to generate some metrics data.
 
@@ -249,7 +251,7 @@ func verifyMetrics() {
 	// Construct the metric scraping curl command using Pod IP.
 	metricScrapeCmd := getMetricsScrapeCommand(podIP, token)
 
-	modelServerPods, err := getPodsByLabel(testConfig.Context, testConfig.K8sClient, testConfig.NsName, "app", modelServerName)
+	modelServerPods, err := getPodsByLabel(testConfig.Context, testConfig.K8sClient, testConfig.NsName, "app", testutils.ModelServerName)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Expected to find model server pods")
 
 	// Define the metrics we expect to see
@@ -294,7 +296,7 @@ func verifyMetrics() {
 				"inference_pool_per_pod_queue_size{model_server_pod=\"%s-rank-%d\",name=\"%s\"}",
 				modelServerPod.Name,
 				rank,
-				modelServerName,
+				testutils.ModelServerName,
 			)
 			expectedMetrics = append(expectedMetrics, metricQueueSize)
 
@@ -302,7 +304,7 @@ func verifyMetrics() {
 				"llm_d_router_epp_per_endpoint_queue_size{model_server_endpoint=\"%s-rank-%d\",name=\"%s\"}",
 				modelServerPod.Name,
 				rank,
-				modelServerName,
+				testutils.ModelServerName,
 			)
 			expectedMetrics = append(expectedMetrics, metricQueueSizeNew)
 		}

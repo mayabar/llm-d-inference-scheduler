@@ -5,7 +5,7 @@ metadata:
   labels:
     app: qwen-decoder
     llm-d.ai/inference-serving: "true"
-    llm-d.ai/model: "qwen2-0-5b"
+    llm-d.ai/model: "vllm-qwen3-2b-instruct"
     llm-d.ai/role: "decode"
 spec:
   affinity:
@@ -40,7 +40,7 @@ spec:
         allowPrivilegeEscalation: false
       args:
         - "--model"
-        - "Qwen/Qwen2-0.5B"
+        - "Qwen/Qwen3-VL-2B-Instruct"
         - "--port"
         - "8200"
         - "--enforce-eager"

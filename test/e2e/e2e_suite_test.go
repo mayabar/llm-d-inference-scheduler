@@ -36,10 +36,6 @@ const (
 	crdKustomizePath = "../../config/crd"
 	// inferExtManifest is the manifest for the inference extension test resources.
 	inferExtManifest = "../../deploy/components/inference-gateway/inference-pools.yaml"
-	// simModelName is the test model name.
-	simModelName = "food-review"
-	// kvModelName is the model name used in KV tests.
-	kvModelName = "Qwen/Qwen2.5-1.5B-Instruct"
 	// envoyManifest is the manifest for the envoy proxy test resources.
 	envoyManifest = "../../deploy/environments/dev/e2e-infra/envoy.yaml"
 	// eppManifest is the manifest for the deployment of the EPP
@@ -303,7 +299,7 @@ func createEnvoy() {
 }
 
 func createInferencePool(numTargetPorts int, toDelete bool) []string {
-	poolName := simModelName + "-inference-pool"
+	poolName := testutils.ModelServerName + "-inference-pool"
 
 	if toDelete {
 		objName := []string{"inferencepool/" + poolName}

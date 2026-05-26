@@ -33,7 +33,7 @@ var disruptionClient = &http.Client{Timeout: 10 * time.Second}
 
 // sendRawCompletion sends a completion request and returns the HTTP status code.
 func sendRawCompletion() (int, error) {
-	body := fmt.Sprintf(`{"model":"%s","prompt":"%s","max_tokens":10}`, simModelName, simplePrompt)
+	body := fmt.Sprintf(`{"model":"%s","prompt":"%s","max_tokens":10}`, testutils.ModelName, simplePrompt)
 	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://localhost:%s/v1/completions", port), strings.NewReader(body))
 	if err != nil {
 		return 0, err
@@ -99,7 +99,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 			gomega.Expect(decodePods).Should(gomega.HaveLen(2))
 
 			ginkgo.By("Verifying requests route successfully before disruption")
-			nsHdr, _, _ := runCompletion(simplePrompt, simModelName)
+			nsHdr, _, _ := runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 
 			targetPod := decodePods[0]
@@ -112,7 +112,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 
 			ginkgo.By("Verifying new requests eventually route to a pod other than the killed one")
 			gomega.Eventually(func() error {
-				nsHdr, podHdr, _, err := tryCompletion(simplePrompt, simModelName)
+				nsHdr, podHdr, _, err := tryCompletion(simplePrompt, testutils.ModelName)
 				if err != nil {
 					return err
 				}
@@ -133,7 +133,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 
 			ginkgo.By("Verifying requests succeed after recovery")
 			for range 3 {
-				nsHdr, _, _ = runCompletion(simplePrompt, simModelName)
+				nsHdr, _, _ = runCompletion(simplePrompt, testutils.ModelName)
 				gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			}
 		})
@@ -185,7 +185,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 
 			ginkgo.By("Verifying requests succeed after recovery")
 			for range 3 {
-				nsHdr, _, _ := runCompletion(simplePrompt, simModelName)
+				nsHdr, _, _ := runCompletion(simplePrompt, testutils.ModelName)
 				gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			}
 		})
@@ -205,7 +205,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 			gomega.Expect(decodePods).Should(gomega.HaveLen(1))
 
 			ginkgo.By("Verifying requests succeed before disruption")
-			nsHdr, _, _ := runCompletion(simplePrompt, simModelName)
+			nsHdr, _, _ := runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 
 			ginkgo.By("Scaling deployment to zero")
@@ -231,7 +231,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 
 			ginkgo.By("Verifying requests succeed after recovery")
 			gomega.Eventually(func() string {
-				nsHdr, _, _ := runCompletion(simplePrompt, simModelName)
+				nsHdr, _, _ := runCompletion(simplePrompt, testutils.ModelName)
 				return nsHdr
 			}, eppRecoveryTimeout, 2*time.Second).Should(gomega.Equal(nsName))
 		})
@@ -248,7 +248,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 			ginkgo.DeferCleanup(testutils.DeleteObjects, testConfig, epp)
 
 			ginkgo.By("Verifying requests succeed before EPP disruption")
-			nsHdr, _, _ := runCompletion(simplePrompt, simModelName)
+			nsHdr, _, _ := runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 
 			ginkgo.By("Finding EPP pod")
@@ -297,7 +297,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 			ginkgo.DeferCleanup(testutils.DeleteObjects, testConfig, epp)
 
 			ginkgo.By("Verifying requests succeed before disruption")
-			nsHdr, _, _ := runCompletion(simplePrompt, simModelName)
+			nsHdr, _, _ := runCompletion(simplePrompt, testutils.ModelName)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 
 			ginkgo.By("Starting background traffic")
@@ -341,7 +341,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 
 func sendStreamingCompletion(connected chan<- string) error {
 	longPrompt := strings.Repeat("This is a longer prompt to keep the stream open. ", 20)
-	body := fmt.Sprintf(`{"model":"%s","prompt":"%s","max_tokens":100,"stream":true}`, simModelName, longPrompt)
+	body := fmt.Sprintf(`{"model":"%s","prompt":"%s","max_tokens":100,"stream":true}`, testutils.ModelName, longPrompt)
 	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://localhost:%s/v1/completions", port), strings.NewReader(body))
 	if err != nil {
 		connected <- ""

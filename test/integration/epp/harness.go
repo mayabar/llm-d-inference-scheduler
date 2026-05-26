@@ -57,6 +57,7 @@ import (
 	eppServer "github.com/llm-d/llm-d-router/pkg/epp/server"
 	testutil "github.com/llm-d/llm-d-router/pkg/epp/util/testing"
 	integration "github.com/llm-d/llm-d-router/test/integration"
+	"github.com/llm-d/llm-d-router/test/utils"
 )
 
 // Global State (Initialized in TestMain)
@@ -69,7 +70,7 @@ var (
 )
 
 const (
-	testPoolName = "vllm-qwen3-32b-pool"
+	testPoolName = utils.ModelServerName + "-pool"
 
 	// mockDataSourceType is the plugin type name used for the mock data source in integration tests.
 	mockDataSourceType = "mock-metrics-source"

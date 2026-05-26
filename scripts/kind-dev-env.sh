@@ -37,14 +37,7 @@ EPP_IMAGE="${EPP_IMAGE:-${IMAGE_REGISTRY}/llm-d-router-endpoint-picker:${EPP_TAG
 export EPP_IMAGE
 
 # Set the model name to deploy.
-# When Encode disaggregation is enabled (multimodal pipeline), default to a
-# multimodal model. Otherwise use the standard text-only model.
-# Note: DISAGG_E/DISAGG_P are set later in this script, so read the raw env vars here.
-if [ "${DISAGG_E:-false}" == "true" ] || [ "${EPD_ENABLED:-false}" == "true" ] || [ "${EPD_ENABLED:-false}" == "\"true\"" ]; then
-  export MODEL_NAME="${MODEL_NAME:-Qwen/Qwen3-VL-2B-Instruct}"
-else
-  export MODEL_NAME="${MODEL_NAME:-TinyLlama/TinyLlama-1.1B-Chat-v1.0}"
-fi
+export MODEL_NAME="${MODEL_NAME:-Qwen/Qwen3-VL-2B-Instruct}"
 # Extract model family (e.g., "meta-llama" from "meta-llama/Llama-3.1-8B-Instruct")
 export MODEL_FAMILY="${MODEL_NAME%%/*}"
 # Extract model ID (e.g., "Llama-3.1-8B-Instruct")

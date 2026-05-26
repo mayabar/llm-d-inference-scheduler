@@ -11,7 +11,7 @@ spec:
     - backendRefs:
         - group: inference.networking.x-k8s.io
           kind: InferencePool
-          name: qwen2-0-5b
+          name: vllm-qwen3-2b-instruct
           port: 8000
           weight: 1
       matches:

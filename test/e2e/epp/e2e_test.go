@@ -32,6 +32,7 @@ import (
 	v1 "sigs.k8s.io/gateway-api-inference-extension/api/v1"
 
 	"github.com/llm-d/llm-d-router/apix/v1alpha2"
+	testutils "github.com/llm-d/llm-d-router/test/utils"
 	igwtestutils "github.com/llm-d/llm-d-router/test/utils/igw"
 )
 
@@ -48,7 +49,7 @@ var _ = ginkgo.Describe("InferencePool", func() {
 
 		ginkgo.By("Modifying deployment using local image for testing (temporary).")
 		deploy := &appsv1.Deployment{}
-		key := types.NamespacedName{Name: modelServerName, Namespace: testConfig.NsName}
+		key := types.NamespacedName{Name: testutils.ModelServerName, Namespace: testConfig.NsName}
 
 		gomega.Eventually(func() error {
 			err := testConfig.K8sClient.Get(testConfig.Context, key, deploy)
@@ -132,7 +133,7 @@ var _ = ginkgo.Describe("InferencePool", func() {
 		}, testConfig.ExistsTimeout, testConfig.Interval).Should(gomega.Succeed())
 
 		ginkgo.By("Restoring vLLM Deployment and InferencePool.")
-		key := types.NamespacedName{Name: modelServerName, Namespace: testConfig.NsName}
+		key := types.NamespacedName{Name: testutils.ModelServerName, Namespace: testConfig.NsName}
 
 		// Restore InferencePool
 		pool := &v1.InferencePool{}
