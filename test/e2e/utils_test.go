@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -199,84 +201,130 @@ func isModelReal(modelName string) bool {
 	return resp.StatusCode == http.StatusOK
 }
 
-// removeSidecarIfSimulated strips the vllm-render init container and the orphaned
+// removeSidecarIfSimulatedModel strips the vllm-render init container and the orphaned
 // model-cache volume from all manifests when running against a simulated (non-real) model.
-func removeSidecarIfSimulated(inputs []string) []string {
+func removeSidecarIfSimulatedModel(inputs []string) []string {
 	outputs := make([]string, len(inputs))
+
 	for idx, input := range inputs {
-		lines := strings.Split(input, "\n")
-		lines = removeListItemByName(lines, "vllm-render")
-		lines = removeListItemByName(lines, "model-cache")
-		outputs[idx] = strings.Join(lines, "\n")
+		output, err := processK8sManifests(input)
+		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+		outputs[idx] = output
 	}
+
 	return outputs
 }
 
-// removeListItemByName removes YAML list items whose direct `name:` field equals nameValue.
-// It buffers each item bounded by its leading "- " indent, then discards the buffer if the
-// name matches. The name check is limited to indent+2 (direct fields) to avoid matching
-// nested sub-items (e.g. volumeMount name inside a container block).
-func removeListItemByName(lines []string, nameValue string) []string {
-	result := make([]string, 0, len(lines))
-	var buf []string
-	itemIndent := -1
-	isTarget := false
+// processK8sManifests reads a multi-document YAML string, filters the specified
+// Deployment fields, and returns the modified YAML string.
+func processK8sManifests(yamlContent string) (string, error) {
+	decoder := yaml.NewDecoder(bytes.NewReader([]byte(yamlContent)))
+	var modifiedDocs []any
 
-	flush := func() {
-		if !isTarget {
-			result = append(result, buf...)
+	// Iterate through all YAML documents in the file
+	for {
+		var doc map[string]any
+		err := decoder.Decode(&doc)
+		if err == io.EOF {
+			break
 		}
-		buf = nil
-		isTarget = false
-		itemIndent = -1
+		if err != nil {
+			return "", fmt.Errorf("error decoding yaml: %w", err)
+		}
+
+		// If the document is a Deployment, apply our cleanup logic
+		if kind, ok := doc["kind"].(string); ok && kind == "Deployment" {
+			podSpec := getPodSpec(doc)
+			if podSpec != nil {
+				removeNamedItem(podSpec, "initContainers", "vllm-render")
+				removeNamedItem(podSpec, "volumes", "model-cache")
+			}
+		}
+
+		// An empty YAML list entry (e.g. "- " left over from an unset variable
+		// substitution) decodes to a nil slice element and would re-encode as
+		// "- null". Drop those nil entries everywhere in the document.
+		stripNilFromLists(doc)
+
+		modifiedDocs = append(modifiedDocs, doc)
 	}
 
-	for _, line := range lines {
-		stripped := strings.TrimLeft(line, " ")
-		if stripped == "" {
-			if itemIndent >= 0 {
-				buf = append(buf, line)
-			} else {
-				result = append(result, line)
+	// Re-encode back to YAML string
+	var buf bytes.Buffer
+	encoder := yaml.NewEncoder(&buf)
+	encoder.SetIndent(2) // Standard Kubernetes YAML indentation
+
+	for _, doc := range modifiedDocs {
+		if err := encoder.Encode(doc); err != nil {
+			return "", fmt.Errorf("error encoding yaml: %w", err)
+		}
+	}
+	encoder.Close()
+
+	return buf.String(), nil
+}
+
+// stripNilFromLists recursively walks a decoded YAML value and drops nil entries
+// from any list it encounters. This prevents empty source list items (like "- ")
+// from being re-encoded as "- null".
+func stripNilFromLists(v any) any {
+	switch x := v.(type) {
+	case map[string]any:
+		for k, val := range x {
+			x[k] = stripNilFromLists(val)
+		}
+		return x
+	case []any:
+		filtered := make([]any, 0, len(x))
+		for _, item := range x {
+			if item == nil {
+				continue
 			}
+			filtered = append(filtered, stripNilFromLists(item))
+		}
+		return filtered
+	default:
+		return v
+	}
+}
+
+// getPodSpec safely navigates a Deployment document down to spec.template.spec
+// (the PodSpec). Returns the PodSpec map and true on success, or nil and false
+// if any level is missing or has an unexpected type.
+func getPodSpec(doc map[string]any) map[string]any {
+	if spec, ok := doc["spec"].(map[string]any); ok {
+		if template, ok := spec["template"].(map[string]any); ok {
+			if podSpec, ok := template["spec"].(map[string]any); ok {
+				return podSpec
+			}
+		}
+	}
+	return nil
+}
+
+// removeNamedItem removes the entry whose `name:` field equals nameValue from the
+// list at parent[fieldName]. If the list becomes empty, the field is deleted from
+// parent for cleaner YAML output.
+func removeNamedItem(parent map[string]any, fieldName, nameValue string) {
+	items, ok := parent[fieldName].([]any)
+	if !ok {
+		return
+	}
+
+	filtered := make([]any, 0, len(items))
+	for _, item := range items {
+		entry, ok := item.(map[string]any)
+		if ok && entry["name"] == nameValue {
 			continue
 		}
-		indent := len(line) - len(stripped)
-		isListStart := strings.HasPrefix(stripped, "- ")
-
-		switch {
-		case isListStart && (itemIndent < 0 || indent == itemIndent):
-			// First item or sibling at the same level.
-			if itemIndent >= 0 {
-				flush()
-			}
-			itemIndent = indent
-			buf = append(make([]string, 0, 2), line)
-			// Inline name: "- name: <value>"
-			if strings.TrimSpace(strings.TrimPrefix(stripped, "- ")) == "name: "+nameValue {
-				isTarget = true
-			}
-		case isListStart && itemIndent >= 0 && indent < itemIndent:
-			// List item at a shallower level — we've left the tracked list.
-			flush()
-			result = append(result, line)
-		case itemIndent >= 0 && indent <= itemIndent && !isListStart:
-			// Non-list line at or above item indent — end of list.
-			flush()
-			result = append(result, line)
-		case itemIndent >= 0:
-			// Content line inside the tracked item.
-			buf = append(buf, line)
-			// Own-line name field at exactly indent+2 (direct child, not nested).
-			if indent == itemIndent+2 && stripped == "name: "+nameValue {
-				isTarget = true
-			}
-		default:
-			result = append(result, line)
-		}
+		filtered = append(filtered, item)
 	}
-	flush()
-	return result
+
+	if len(filtered) == 0 {
+		delete(parent, fieldName)
+	} else {
+		parent[fieldName] = filtered
+	}
 }
 
 func substituteMany(inputs []string, substitutions map[string]string) []string {

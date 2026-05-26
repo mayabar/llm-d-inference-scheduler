@@ -45,7 +45,7 @@ func createModelServersFromKustomize(kustomizeDir string, extra map[string]strin
 	manifests = removeEmptyArgs(manifests)
 	// remove render sidecar if model is simulated
 	if !isModelReal(subs["${MODEL_NAME}"]) {
-		manifests = removeSidecarIfSimulated(manifests)
+		manifests = removeSidecarIfSimulatedModel(manifests)
 	}
 	objects := testutils.CreateObjsFromYaml(testConfig, manifests)
 	podsInDeploymentsReady(objects)
