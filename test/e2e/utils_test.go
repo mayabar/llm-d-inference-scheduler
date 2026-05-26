@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -209,6 +211,7 @@ func isModelReal(modelName string) bool {
 // initContainer and the model-cache volume stripped from any Deployment.
 func removeRenderSidecar(inputs []string) []string {
 	outputs := make([]string, len(inputs))
+
 	for idx, input := range inputs {
 		docs := strings.Split(input, "\n---")
 		rendered := make([]string, 0, len(docs))
@@ -220,6 +223,7 @@ func removeRenderSidecar(inputs []string) []string {
 		}
 		outputs[idx] = strings.Join(rendered, "\n---\n")
 	}
+
 	return outputs
 }
 
