@@ -48,14 +48,14 @@ func doPost(path, body string, extraHeaders map[string]string) (string, string, 
 	return resp.Header.Get("x-inference-namespace"), resp.Header.Get("x-inference-pod"), respBody
 }
 
-func runCompletion(prompt string, theModel openai.CompletionNewParamsModel) (string, string, string) {
+func runCompletion(prompt string) (string, string, string) {
 	var httpResp *http.Response
 
 	completionParams := openai.CompletionNewParams{
 		Prompt: openai.CompletionNewParamsPromptUnion{
 			OfString: openai.String(prompt),
 		},
-		Model: theModel,
+		Model: testutils.ModelName,
 	}
 
 	ginkgo.By(fmt.Sprintf("Sending Completion Request: (port %s) %#v", port, completionParams))
@@ -74,11 +74,11 @@ func runCompletion(prompt string, theModel openai.CompletionNewParamsModel) (str
 
 // tryCompletion is like runCompletion but returns an error instead of asserting,
 // intended for use inside Eventually blocks where transient failures are acceptable.
-func tryCompletion(prompt string, theModel openai.CompletionNewParamsModel) (string, string, string, error) {
+func tryCompletion(prompt string) (string, string, string, error) {
 	var httpResp *http.Response
 	completionParams := openai.CompletionNewParams{
 		Prompt: openai.CompletionNewParamsPromptUnion{OfString: openai.String(prompt)},
-		Model:  theModel,
+		Model:  testutils.ModelName,
 	}
 	resp, err := newOpenAIClient().Completions.New(
 		testConfig.Context,
@@ -99,14 +99,14 @@ func tryCompletion(prompt string, theModel openai.CompletionNewParamsModel) (str
 	return ns, pod, p, nil
 }
 
-func runChatCompletion(prompt, modelName string) (string, string, string) {
+func runChatCompletion(prompt string) (string, string, string) {
 	var httpResp *http.Response
 
 	params := openai.ChatCompletionNewParams{
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage(prompt),
 		},
-		Model: modelName,
+		Model: testutils.ModelName,
 	}
 	resp, err := newOpenAIClient().Chat.Completions.New(testConfig.Context, params, option.WithResponseInto(&httpResp))
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())

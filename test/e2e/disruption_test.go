@@ -99,7 +99,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 			gomega.Expect(decodePods).Should(gomega.HaveLen(2))
 
 			ginkgo.By("Verifying requests route successfully before disruption")
-			nsHdr, _, _ := runCompletion(simplePrompt, testutils.ModelName)
+			nsHdr, _, _ := runCompletion(simplePrompt)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 
 			targetPod := decodePods[0]
@@ -112,7 +112,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 
 			ginkgo.By("Verifying new requests eventually route to a pod other than the killed one")
 			gomega.Eventually(func() error {
-				nsHdr, podHdr, _, err := tryCompletion(simplePrompt, testutils.ModelName)
+				nsHdr, podHdr, _, err := tryCompletion(simplePrompt)
 				if err != nil {
 					return err
 				}
@@ -133,7 +133,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 
 			ginkgo.By("Verifying requests succeed after recovery")
 			for range 3 {
-				nsHdr, _, _ = runCompletion(simplePrompt, testutils.ModelName)
+				nsHdr, _, _ = runCompletion(simplePrompt)
 				gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			}
 		})
@@ -185,7 +185,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 
 			ginkgo.By("Verifying requests succeed after recovery")
 			for range 3 {
-				nsHdr, _, _ := runCompletion(simplePrompt, testutils.ModelName)
+				nsHdr, _, _ := runCompletion(simplePrompt)
 				gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 			}
 		})
@@ -205,7 +205,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 			gomega.Expect(decodePods).Should(gomega.HaveLen(1))
 
 			ginkgo.By("Verifying requests succeed before disruption")
-			nsHdr, _, _ := runCompletion(simplePrompt, testutils.ModelName)
+			nsHdr, _, _ := runCompletion(simplePrompt)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 
 			ginkgo.By("Scaling deployment to zero")
@@ -231,7 +231,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 
 			ginkgo.By("Verifying requests succeed after recovery")
 			gomega.Eventually(func() string {
-				nsHdr, _, _ := runCompletion(simplePrompt, testutils.ModelName)
+				nsHdr, _, _ := runCompletion(simplePrompt)
 				return nsHdr
 			}, eppRecoveryTimeout, 2*time.Second).Should(gomega.Equal(nsName))
 		})
@@ -248,7 +248,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 			ginkgo.DeferCleanup(testutils.DeleteObjects, testConfig, epp)
 
 			ginkgo.By("Verifying requests succeed before EPP disruption")
-			nsHdr, _, _ := runCompletion(simplePrompt, testutils.ModelName)
+			nsHdr, _, _ := runCompletion(simplePrompt)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 
 			ginkgo.By("Finding EPP pod")
@@ -297,7 +297,7 @@ var _ = ginkgo.Describe("Disruption tests", ginkgo.Ordered, ginkgo.Label("Disrup
 			ginkgo.DeferCleanup(testutils.DeleteObjects, testConfig, epp)
 
 			ginkgo.By("Verifying requests succeed before disruption")
-			nsHdr, _, _ := runCompletion(simplePrompt, testutils.ModelName)
+			nsHdr, _, _ := runCompletion(simplePrompt)
 			gomega.Expect(nsHdr).Should(gomega.Equal(nsName))
 
 			ginkgo.By("Starting background traffic")
