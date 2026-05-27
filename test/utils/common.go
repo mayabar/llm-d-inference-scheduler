@@ -5,6 +5,3 @@ const ModelName = "Qwen/Qwen3-VL-2B-Instruct"
 
 // server pod name based onthe model name, used for pool and epp pod names
 const ModelServerName = "vllm-qwen3-2b-instruct"
-
-// "HuggingFaceTB/SmolVLM-500M-Instruct"
-// "Qwen/Qwen2-0.5B"
