@@ -11,17 +11,17 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apilabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -159,6 +159,9 @@ func removeEmptyArgs(inputs []string) []string {
 			if strings.TrimSpace(line) == `- ""` {
 				continue
 			}
+			if strings.TrimSpace(line) == `-` {
+				continue
+			}
 			filtered = append(filtered, line)
 		}
 		outputs[idx] = strings.Join(filtered, "\n")
@@ -201,130 +204,60 @@ func isModelReal(modelName string) bool {
 	return resp.StatusCode == http.StatusOK
 }
 
-// removeSidecarIfSimulatedModel strips the vllm-render init container and the orphaned
-// model-cache volume from all manifests when running against a simulated (non-real) model.
-func removeSidecarIfSimulatedModel(inputs []string) []string {
+// removeRenderSidecar takes a slice of YAML strings (each may contain multiple
+// objects separated by "---") and returns the same slice with the vllm-render
+// initContainer and the model-cache volume stripped from any Deployment.
+func removeRenderSidecar(inputs []string) []string {
 	outputs := make([]string, len(inputs))
-
 	for idx, input := range inputs {
-		output, err := processK8sManifests(input)
-		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-		outputs[idx] = output
+		docs := strings.Split(input, "\n---")
+		rendered := make([]string, 0, len(docs))
+		for _, doc := range docs {
+			if strings.TrimSpace(doc) == "" {
+				continue
+			}
+			rendered = append(rendered, filterDocument(doc))
+		}
+		outputs[idx] = strings.Join(rendered, "\n---\n")
 	}
-
 	return outputs
 }
 
-// processK8sManifests reads a multi-document YAML string, filters the specified
-// Deployment fields, and returns the modified YAML string.
-func processK8sManifests(yamlContent string) (string, error) {
-	decoder := yaml.NewDecoder(bytes.NewReader([]byte(yamlContent)))
-	var modifiedDocs []any
-
-	// Iterate through all YAML documents in the file
-	for {
-		var doc map[string]any
-		err := decoder.Decode(&doc)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return "", fmt.Errorf("error decoding yaml: %w", err)
-		}
-
-		// If the document is a Deployment, apply our cleanup logic
-		if kind, ok := doc["kind"].(string); ok && kind == "Deployment" {
-			podSpec := getPodSpec(doc)
-			if podSpec != nil {
-				removeNamedItem(podSpec, "initContainers", "vllm-render")
-				removeNamedItem(podSpec, "volumes", "model-cache")
-			}
-		}
-
-		// An empty YAML list entry (e.g. "- " left over from an unset variable
-		// substitution) decodes to a nil slice element and would re-encode as
-		// "- null". Drop those nil entries everywhere in the document.
-		stripNilFromLists(doc)
-
-		modifiedDocs = append(modifiedDocs, doc)
+func filterDocument(doc string) string {
+	obj := &unstructured.Unstructured{}
+	err := yaml.Unmarshal([]byte(doc), &obj.Object)
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	if len(obj.Object) == 0 {
+		return doc
 	}
-
-	// Re-encode back to YAML string
-	var buf bytes.Buffer
-	encoder := yaml.NewEncoder(&buf)
-	encoder.SetIndent(2) // Standard Kubernetes YAML indentation
-
-	for _, doc := range modifiedDocs {
-		if err := encoder.Encode(doc); err != nil {
-			return "", fmt.Errorf("error encoding yaml: %w", err)
-		}
+	if obj.GetKind() == "Deployment" {
+		removePodSpecListItem(obj, "initContainers", "vllm-render")
+		removePodSpecListItem(obj, "volumes", "model-cache")
 	}
-	encoder.Close()
-
-	return buf.String(), nil
+	out, err := yaml.Marshal(obj.Object)
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	return strings.TrimRight(string(out), "\n")
 }
 
-// stripNilFromLists recursively walks a decoded YAML value and drops nil entries
-// from any list it encounters. This prevents empty source list items (like "- ")
-// from being re-encoded as "- null".
-func stripNilFromLists(v any) any {
-	switch x := v.(type) {
-	case map[string]any:
-		for k, val := range x {
-			x[k] = stripNilFromLists(val)
-		}
-		return x
-	case []any:
-		filtered := make([]any, 0, len(x))
-		for _, item := range x {
-			if item == nil {
-				continue
-			}
-			filtered = append(filtered, stripNilFromLists(item))
-		}
-		return filtered
-	default:
-		return v
-	}
-}
-
-// getPodSpec safely navigates a Deployment document down to spec.template.spec
-// (the PodSpec). Returns the PodSpec map and true on success, or nil and false
-// if any level is missing or has an unexpected type.
-func getPodSpec(doc map[string]any) map[string]any {
-	if spec, ok := doc["spec"].(map[string]any); ok {
-		if template, ok := spec["template"].(map[string]any); ok {
-			if podSpec, ok := template["spec"].(map[string]any); ok {
-				return podSpec
-			}
-		}
-	}
-	return nil
-}
-
-// removeNamedItem removes the entry whose `name:` field equals nameValue from the
-// list at parent[fieldName]. If the list becomes empty, the field is deleted from
-// parent for cleaner YAML output.
-func removeNamedItem(parent map[string]any, fieldName, nameValue string) {
-	items, ok := parent[fieldName].([]any)
-	if !ok {
+func removePodSpecListItem(obj *unstructured.Unstructured, fieldName, itemName string) {
+	path := []string{"spec", "template", "spec", fieldName}
+	items, found, err := unstructured.NestedSlice(obj.Object, path...)
+	if err != nil || !found {
 		return
 	}
-
 	filtered := make([]any, 0, len(items))
 	for _, item := range items {
-		entry, ok := item.(map[string]any)
-		if ok && entry["name"] == nameValue {
+		if m, ok := item.(map[string]any); ok && m["name"] == itemName {
 			continue
 		}
 		filtered = append(filtered, item)
 	}
-
 	if len(filtered) == 0 {
-		delete(parent, fieldName)
-	} else {
-		parent[fieldName] = filtered
+		unstructured.RemoveNestedField(obj.Object, path...)
+		return
 	}
+	err = unstructured.SetNestedSlice(obj.Object, filtered, path...)
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
 func substituteMany(inputs []string, substitutions map[string]string) []string {
