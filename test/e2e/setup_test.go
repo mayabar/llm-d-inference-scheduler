@@ -12,8 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configloader "github.com/llm-d/llm-d-router/pkg/epp/config/loader"
-	"github.com/llm-d/llm-d-router/pkg/epp/framework/plugins/requestcontrol/dataproducer/tokenizer"
 	"github.com/llm-d/llm-d-router/pkg/sidecar/proxy"
 	testutils "github.com/llm-d/llm-d-router/test/utils"
 )
@@ -23,7 +21,6 @@ func createModelServersFromKustomize(kustomizeDir string, extra map[string]strin
 		"${MODEL_NAME}":              simModelName,
 		"${POOL_NAME}":               poolName,
 		"${VLLM_IMAGE}":              vllmSimImage,
-		"${VLLM_RENDER_IMAGE}":       vllmRenderImage,
 		"${SIDECAR_IMAGE}":           sideCarImage,
 		"${VLLM_DATA_PARALLEL_SIZE}": "1",
 		"${VLLM_SIM_MODE}":           "echo",
@@ -31,7 +28,6 @@ func createModelServersFromKustomize(kustomizeDir string, extra map[string]strin
 		"${DECODE_ROLE}":             "",
 		"${EPP_NAME}":                "e2e-epp",
 		"${NAMESPACE}":               nsName,
-		"${HF_TOKEN}":                "",
 		"${VLLM_EXTRA_ARGS_E}":       "",
 		"${VLLM_EXTRA_ARGS_P}":       "",
 		"${VLLM_EXTRA_ARGS_D}":       "",
@@ -45,10 +41,6 @@ func createModelServersFromKustomize(kustomizeDir string, extra map[string]strin
 	// Remove labels with empty values (produced when ${DECODE_ROLE} is empty)
 	manifests = removeEmptyLabels(manifests)
 	manifests = removeEmptyArgs(manifests)
-	// remove render sidecar if model is simulated
-	if !isModelReal(subs["${MODEL_NAME}"]) {
-		manifests = removeRenderSidecar(manifests)
-	}
 	objects := testutils.CreateObjsFromYaml(testConfig, manifests)
 	podsInDeploymentsReady(objects)
 	return objects
@@ -127,6 +119,18 @@ func createModelServersEPDUnified(replicas int) []string {
 	})
 }
 
+func createRender() []string {
+	renderYamls := substituteMany(testutils.ReadYaml(renderManifest),
+		map[string]string{
+			"${MODEL_NAME}":        kvModelName,
+			"${VLLM_RENDER_IMAGE}": vllmRenderImage,
+			"${HF_TOKEN}":          "",
+		})
+	objects := testutils.CreateObjsFromYaml(testConfig, renderYamls)
+	podsInDeploymentsReady(objects)
+	return objects
+}
+
 func createEndPointPicker(eppConfig string) []string {
 	configMap := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -148,19 +152,12 @@ func createEndPointPicker(eppConfig string) []string {
 	eppYamls := testutils.ReadYaml(eppManifest)
 	eppYamls = substituteMany(eppYamls,
 		map[string]string{
-			"${EPP_NAME}":          "e2e-epp",
-			"${EPP_IMAGE}":         eppImage,
-			"${VLLM_RENDER_IMAGE}": vllmRenderImage,
-			// The render sidecar needs a real, fetchable model. Sim tests
-			// don't query it; the cost is paying weights-load on every EPP.
-			"${MODEL_NAME}":            kvModelName,
+			"${EPP_NAME}":              "e2e-epp",
+			"${EPP_IMAGE}":             eppImage,
 			"${NAMESPACE}":             nsName,
 			"${POOL_NAME}":             simModelName + "-inference-pool",
 			"${METRICS_ENDPOINT_AUTH}": "false",
 		})
-	if !usesTokenProducer(eppConfig) {
-		eppYamls = removeRenderSidecar(eppYamls)
-	}
 
 	objects = append(objects, testutils.CreateObjsFromYaml(testConfig, eppYamls)...)
 	podsInDeploymentsReady(objects)
@@ -180,15 +177,4 @@ func createEndPointPicker(eppConfig string) []string {
 	}, readyTimeout, 2*time.Second).Should(gomega.BeTrue(), "gateway should be ready within the ready timeout")
 
 	return objects
-}
-
-func usesTokenProducer(eppConfig string) bool {
-	cfg, _, err := configloader.LoadRawConfig([]byte(eppConfig), ginkgo.GinkgoLogr)
-	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-	for _, plugin := range cfg.Plugins {
-		if plugin.Type == tokenizer.PluginType {
-			return true
-		}
-	}
-	return false
 }
