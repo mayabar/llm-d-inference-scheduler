@@ -190,7 +190,6 @@ func removeEmptyLabels(inputs []string) []string {
 	return outputs
 }
 
-
 func substituteMany(inputs []string, substitutions map[string]string) []string {
 	outputs := make([]string, len(inputs))
 	for idx, input := range inputs {
