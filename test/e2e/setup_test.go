@@ -28,9 +28,9 @@ func createModelServersFromKustomize(kustomizeDir string, extra map[string]strin
 		"${DECODE_ROLE}":             "",
 		"${EPP_NAME}":                "e2e-epp",
 		"${NAMESPACE}":               nsName,
-		"${VLLM_EXTRA_ARGS_E}":       "",
-		"${VLLM_EXTRA_ARGS_P}":       "",
-		"${VLLM_EXTRA_ARGS_D}":       "",
+		"${VLLM_EXTRA_ARGS_E}":       "--force-dummy-tokenizer",
+		"${VLLM_EXTRA_ARGS_P}":       "--force-dummy-tokenizer",
+		"${VLLM_EXTRA_ARGS_D}":       "--force-dummy-tokenizer",
 	}
 	for k, v := range extra {
 		subs[k] = v
@@ -124,7 +124,6 @@ func createRender() []string {
 		map[string]string{
 			"${MODEL_NAME}":        kvModelName,
 			"${VLLM_RENDER_IMAGE}": vllmRenderImage,
-			"${HF_TOKEN}":          "",
 		})
 	objects := testutils.CreateObjsFromYaml(testConfig, renderYamls)
 	podsInDeploymentsReady(objects)

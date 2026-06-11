@@ -21,6 +21,8 @@ echo "Running end to end tests"
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+export VLLM_RENDER_IMAGE=${VLLM_IMAGE}
+
 if [ -n "${E2E_LABEL_FILTER:-}" ]; then
   echo "Label filter: ${E2E_LABEL_FILTER}"
   go test -v -timeout 45m "${DIR}/../e2e/" -ginkgo.v -ginkgo.fail-fast "-ginkgo.label-filter=${E2E_LABEL_FILTER}"
