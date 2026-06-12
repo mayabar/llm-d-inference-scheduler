@@ -14,5 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package sessionaffinity provides a session affinity scorer plugin for the epp.
+// Package sessionaffinity provides a session affinity filter plugin for the epp.
 package sessionaffinity

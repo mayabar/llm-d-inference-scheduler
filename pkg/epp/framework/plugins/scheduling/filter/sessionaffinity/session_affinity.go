@@ -29,11 +29,11 @@ import (
 )
 
 const (
-	// SessionAffinityType is the type of the SessionAffinity scorer.
-	SessionAffinityType = "session-affinity-scorer"
+	// SessionAffinityType is the type of the SessionAffinity filter.
+	SessionAffinityType = "session-affinity-filter"
 )
 
-// parameters configures the SessionAffinity scorer.
+// parameters configures the SessionAffinity filter.
 type parameters struct {
 	// HeaderName overrides the default x-session-token header used to read and
 	// write the session token. When empty the default is used.
@@ -41,22 +41,22 @@ type parameters struct {
 }
 
 // compile-time type assertion
-var _ scheduling.Scorer = &SessionAffinity{}
+var _ scheduling.Filter = &SessionAffinity{}
 var _ requestcontrol.ResponseHeaderProcessor = &SessionAffinity{}
 
-// Factory defines the factory function for SessionAffinity scorer.
+// Factory defines the factory function for the SessionAffinity filter.
 func Factory(name string, rawParameters *json.Decoder, _ plugin.Handle) (plugin.Plugin, error) {
 	params := parameters{}
 	if rawParameters != nil {
 		if err := rawParameters.Decode(&params); err != nil {
-			return nil, fmt.Errorf("failed to parse the parameters of the '%s' scorer - %w", SessionAffinityType, err)
+			return nil, fmt.Errorf("failed to parse the parameters of the '%s' filter - %w", SessionAffinityType, err)
 		}
 	}
 
 	return NewSessionAffinity(name, params.HeaderName), nil
 }
 
-// NewSessionAffinity returns a scorer. When sessionHeader is empty the default
+// NewSessionAffinity returns a filter. When sessionHeader is empty the default
 // x-session-token header is used.
 func NewSessionAffinity(name, sessionHeader string) *SessionAffinity {
 	return &SessionAffinity{
@@ -65,10 +65,11 @@ func NewSessionAffinity(name, sessionHeader string) *SessionAffinity {
 	}
 }
 
-// SessionAffinity is a routing scorer that routes subsequent
-// requests in a session to the same pod as the first request in the
-// session was sent to, by giving that pod the specified weight and assigning
-// zero score to the rest of the targets
+// SessionAffinity is a routing filter that pins subsequent requests in a
+// session to the same pod the first request in the session was sent to. When
+// the session pod is among the candidates it is returned as the sole endpoint;
+// otherwise all candidates are returned so downstream filters and scorers can
+// decide.
 type SessionAffinity struct {
 	typedName plugin.TypedName
 	// sessionHeader is the request/response header carrying the session token.
@@ -80,24 +81,21 @@ func (s *SessionAffinity) TypedName() plugin.TypedName {
 	return s.typedName
 }
 
-// Category returns the preference the scorer applies when scoring candidate endpoints.
-func (s *SessionAffinity) Category() scheduling.ScorerCategory {
-	return scheduling.Affinity
-}
-
-// Score assign a high score to the pod used in previous requests and zero to others
-func (s *SessionAffinity) Score(ctx context.Context, request *scheduling.InferenceRequest, endpoints []scheduling.Endpoint) map[scheduling.Endpoint]float64 {
-	scoredEndpoints := make(map[scheduling.Endpoint]float64)
+// Filter returns the endpoint running the session when it is among the
+// candidates, otherwise all candidate endpoints.
+func (s *SessionAffinity) Filter(ctx context.Context, request *scheduling.InferenceRequest, endpoints []scheduling.Endpoint) []scheduling.Endpoint {
 	podName := sessionutil.DecodePodName(ctx, request.Headers[s.sessionHeader])
+	if podName == "" {
+		return endpoints
+	}
 
 	for _, endpoint := range endpoints {
-		scoredEndpoints[endpoint] = 0.0 // initial value
 		if endpoint.GetMetadata().NamespacedName.String() == podName {
-			scoredEndpoints[endpoint] = 1.0
+			return []scheduling.Endpoint{endpoint}
 		}
 	}
 
-	return scoredEndpoints
+	return endpoints
 }
 
 // ResponseHeader sets the session header on the response sent to the client.
