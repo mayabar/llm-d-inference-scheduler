@@ -54,23 +54,27 @@ func (s ServerID) String() string {
 
 // SchedulingContextState is the state of this plugin to be used during a scheduling cycle.
 type SchedulingContextState struct {
-	// PrefixHashes is a list of prefix hashes of the request prompt broken into blocks.
-	PrefixHashes []blockHash
+	// PerPromptHashes holds the prefix hashes for each prompt in the request,
+	// one inner slice per prompt. Single-prompt requests use a length-1 outer slice.
+	PerPromptHashes [][]blockHash
 	// A map of server to its longest prefix cache match length in blocks.
 	PrefixCacheServers map[ServerID]int
 }
 
 // Clone creates a deep copy of the SchedulingContextState.
 func (s *SchedulingContextState) Clone() plugin.StateData {
-	prefixHashes := make([]blockHash, len(s.PrefixHashes))
-	copy(prefixHashes, s.PrefixHashes)
+	perPromptHashes := make([][]blockHash, len(s.PerPromptHashes))
+	for i, hashes := range s.PerPromptHashes {
+		perPromptHashes[i] = make([]blockHash, len(hashes))
+		copy(perPromptHashes[i], hashes)
+	}
 	prefixCacheServers := make(map[ServerID]int, len(s.PrefixCacheServers))
 	for key, value := range s.PrefixCacheServers {
 		prefixCacheServers[key] = value
 	}
 
 	return &SchedulingContextState{
-		PrefixHashes:       prefixHashes,
+		PerPromptHashes:    perPromptHashes,
 		PrefixCacheServers: prefixCacheServers,
 	}
 }
