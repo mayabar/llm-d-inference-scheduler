@@ -60,6 +60,9 @@ const (
 	metricsTestLabel       = "Metrics"
 	deprecatedPDTestLabel  = "DeprecatedPD"
 	disaggTestLabel        = "Disagg"
+
+	// images
+	simulatorImg = "ghcr.io/llm-d/llm-d-inference-sim:v0.9.2"
 )
 
 var (
@@ -74,9 +77,10 @@ var (
 
 	containerRuntime = env.GetEnvString("CONTAINER_RUNTIME", "docker", ginkgo.GinkgoLogr)
 	eppImage         = env.GetEnvString("EPP_IMAGE", "ghcr.io/llm-d/llm-d-router-endpoint-picker:dev", ginkgo.GinkgoLogr)
-	vllmSimImage     = env.GetEnvString("VLLM_IMAGE", "ghcr.io/llm-d/llm-d-inference-sim:v0.9.2", ginkgo.GinkgoLogr)
+	vllmSimImage     = env.GetEnvString("VLLM_IMAGE", simulatorImg, ginkgo.GinkgoLogr)
 	sideCarImage     = env.GetEnvString("SIDECAR_IMAGE", "ghcr.io/llm-d/llm-d-router-disagg-sidecar:dev", ginkgo.GinkgoLogr)
-	vllmRenderImage  = env.GetEnvString("VLLM_RENDER_IMAGE", "ghcr.io/llm-d/llm-d-inference-sim:v0.9.2", ginkgo.GinkgoLogr)
+	vllmRenderImage  = env.GetEnvString("VLLM_RENDER_IMAGE", simulatorImg, ginkgo.GinkgoLogr)
+	vllmRenderPort   = env.GetEnvString("VLLM_RENDER_PORT", "8082", ginkgo.GinkgoLogr)
 	loadRenderImage  = env.GetEnvBool("LOAD_VLLM_RENDER_IMAGE", true, ginkgo.GinkgoLogr)
 	// nsName is the namespace in which the K8S objects will be created
 	nsName = env.GetEnvString("NAMESPACE", "default", ginkgo.GinkgoLogr)
