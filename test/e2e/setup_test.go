@@ -17,7 +17,6 @@ limitations under the License.
 package e2e
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -67,8 +66,9 @@ func createModelServersFromKustomize(kustomizeDir string, extra map[string]strin
 		"${VLLM_EXTRA_ARGS_E}":       "",
 		"${VLLM_EXTRA_ARGS_P}":       "",
 		"${VLLM_EXTRA_ARGS_D}":       "",
-		"${VLLM_RENDER_URL}":         fmt.Sprintf("http://vllm-render.%s.svc.cluster.local:%s", baseNsName, vllmRenderPort),
-		"${VLLM_RENDER_PORT}":        vllmRenderPort,
+		// keep empty to force dummy tokenizer
+		"${VLLM_RENDER_URL}":  "",
+		"${VLLM_RENDER_PORT}": vllmRenderPort,
 	}
 	for k, v := range extra {
 		subs[k] = v
