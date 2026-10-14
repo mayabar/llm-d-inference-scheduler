@@ -50,6 +50,7 @@ spec:
         # - 120s
         # - --mm-render-timeout
         # - 120s
+        - --force-dummy-tokenizer
         - --max-request-body-size-mb
         - '10'
         - '--v'
