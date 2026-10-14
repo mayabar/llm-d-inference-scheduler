@@ -136,11 +136,7 @@ func createModelServersDecodeDP(replicas int) []string {
 		"${VLLM_REPLICA_COUNT_D}":    strconv.Itoa(replicas),
 		"${VLLM_DATA_PARALLEL_SIZE}": "2",
 		"${DECODE_ROLE}":             "decode",
-		// --force-dummy-tokenizer has to survive this override. The decode
-		// component passes --render-url, and a worker carrying that URL without
-		// the flag tokenizes through the shared renderer, which serves kvModelName
-		// and answers 404 for this spec's model.
-		"${VLLM_EXTRA_ARGS_D}": testutils.VLLMExtraArgs("--mode=echo", "--force-dummy-tokenizer"),
+		"${VLLM_EXTRA_ARGS_D}":       testutils.VLLMExtraArgs("--mode=echo"),
 	})
 }
 
