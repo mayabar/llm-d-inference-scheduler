@@ -64,9 +64,9 @@ func createModelServersFromKustomize(kustomizeDir string, extra map[string]strin
 		"${EPP_NAME}":                eppName,
 		"${NAMESPACE}":               nsName,
 		"${HF_TOKEN}":                os.Getenv("HF_TOKEN"),
-		"${VLLM_EXTRA_ARGS_E}":       "--force-dummy-tokenizer",
-		"${VLLM_EXTRA_ARGS_P}":       "--force-dummy-tokenizer",
-		"${VLLM_EXTRA_ARGS_D}":       "--force-dummy-tokenizer",
+		"${VLLM_EXTRA_ARGS_E}":       "",
+		"${VLLM_EXTRA_ARGS_P}":       "",
+		"${VLLM_EXTRA_ARGS_D}":       "",
 		"${VLLM_RENDER_URL}":         fmt.Sprintf("http://vllm-render.%s.svc.cluster.local:%s", baseNsName, vllmRenderPort),
 		"${VLLM_RENDER_PORT}":        vllmRenderPort,
 	}
